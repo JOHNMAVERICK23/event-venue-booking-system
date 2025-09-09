@@ -1,0 +1,59 @@
+http://localhost:3000/index.html
+http://localhost:3000/admin/admin-login.html
+
+
+
+CREATE DATABASE EventVenueBooking;
+
+USE EventVenueBooking;
+
+CREATE TABLE venues (
+    venue_id INT PRIMARY KEY IDENTITY(1,1),
+    venue_name NVARCHAR(100) NOT NULL,
+    capacity INT NOT NULL,
+    status NVARCHAR(20) DEFAULT 'Available' CHECK (status IN ('Available', 'Under Maintenance')),
+    description NVARCHAR(500),
+    hourly_rate DECIMAL(10,2)
+);
+
+CREATE TABLE event_bookings (
+    booking_id INT PRIMARY KEY IDENTITY(1,1),
+    client_name NVARCHAR(100) NOT NULL,
+    contact_email NVARCHAR(100),
+    contact_phone NVARCHAR(20),
+    event_type NVARCHAR(50) NOT NULL,
+    venue_id INT NOT NULL FOREIGN KEY REFERENCES venues(venue_id),
+    event_date DATE NOT NULL,
+    start_time NVARCHAR(20) NOT NULL,
+    end_time NVARCHAR(20) NOT NULL,
+    expected_guests INT,
+    special_requests NVARCHAR(500),
+    status NVARCHAR(20) DEFAULT 'Pending' CHECK (status IN ('Pending', 'Confirmed', 'Cancelled')),
+    booking_date DATETIME DEFAULT GETDATE(),
+    last_updated DATETIME DEFAULT GETDATE()
+);
+
+CREATE TABLE users (
+    user_id INT PRIMARY KEY IDENTITY(1,1),
+    username NVARCHAR(50) NOT NULL UNIQUE,
+    password_hash NVARCHAR(255) NOT NULL,
+    full_name NVARCHAR(100) NOT NULL,
+    role NVARCHAR(50) NOT NULL CHECK (role IN ('Admin', 'Event Coordinator', 'Front Desk', 'Manager', 'Setup Team')),
+    email NVARCHAR(100) NOT NULL,
+    is_active BIT DEFAULT 1
+);
+
+INSERT INTO venues (venue_name, capacity, description, hourly_rate)
+VALUES 
+('Grand Ballroom', 500, 'Elegant ballroom with chandeliers and stage', 5000.00),
+('Conference Room A', 50, 'Medium-sized meeting room with AV equipment', 1500.00),
+('Conference Room B', 30, 'Small meeting room with whiteboard', 1000.00),
+('Garden Pavilion', 200, 'Outdoor venue with canopy and garden view', 3000.00),
+('Executive Boardroom', 20, 'Luxury boardroom with leather chairs', 2500.00);
+
+INSERT INTO users (username, password_hash, full_name, role, email)
+VALUES 
+('admin', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MQD/.8KoqL1f57M1Fh.Ff6O2tQYF./W', 'System Admin', 'Admin', 'admin@cityofdreams.com'),
+('coordinator1', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MQD/.8KoqL1f57M1Fh.Ff6O2tQYF./W', 'Maria Santos', 'Event Coordinator', 'maria@cityofdreams.com'),
+('frontdesk1', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MQD/.8KoqL1f57M1Fh.Ff6O2tQYF./W', 'Juan Dela Cruz', 'Front Desk', 'juan@cityofdreams.com'),
+('manager1', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MQD/.8KoqL1f57M1Fh.Ff6O2tQYF./W', 'Robert Lim', 'Manager', 'robert@cityofdreams.com');
