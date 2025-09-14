@@ -1,25 +1,25 @@
-let currentStep = 1;
-let selectedVenue = null;
-let venues = [];
-
-// API base URL - adjust this based on your server
+// Global variables
 const API_BASE = 'http://localhost:3000/api';
+let currentStep = 1;
+let venues = []; // Initialize as empty array
 
-// Initialize the application
-document.addEventListener('DOMContentLoaded', function() {
-    // Set minimum date to today
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('eventDate').min = today;
-
-    // Initialize event listeners
+// Initialize everything when DOM is loaded
+document.addEventListener("DOMContentLoaded", () => {
     initEventListeners();
-    
-    // Load venues from API
     loadVenuesFromAPI();
-    
-    // Show home section by default
-    showSection('home');
 });
+
+function initEventListeners() {
+    // Check availability button
+    document.getElementById('checkAvailabilityBtn').addEventListener('click', checkAvailability);
+
+    // Form submission
+    document.getElementById('bookingForm').addEventListener('submit', submitBooking);
+
+    // Real-time validation
+    document.getElementById('expectedGuests').addEventListener('input', validateGuestCapacity);
+    document.getElementById('venueSelect').addEventListener('change', updateVenueSelection);
+}
 
 async function loadVenuesFromAPI() {
     try {
@@ -68,81 +68,12 @@ async function loadVenuesFromAPI() {
     }
 }
 
-function updateVenueCards(apiVenues) {
-    // Update the venue cards in the venues section if they exist
-    const venueCards = document.querySelectorAll('.venue-card');
-    venueCards.forEach((card, index) => {
-        if (apiVenues[index]) {
-            const venue = apiVenues[index];
-            const nameElement = card.querySelector('.venue-name');
-            const detailsElement = card.querySelector('.venue-details');
-            const priceElement = card.querySelector('.venue-price');
-            const button = card.querySelector('button');
-            
-            if (nameElement) nameElement.textContent = venue.venue_name;
-            if (priceElement) priceElement.textContent = `₱${venue.hourly_rate.toLocaleString()}/hour`;
-            if (detailsElement) {
-                detailsElement.innerHTML = `
-                    <i class="bi bi-people"></i> Capacity: ${venue.capacity} guests<br>
-                    <i class="bi bi-geo-alt"></i> ${venue.location || 'Main Building'}<br>
-                    <i class="bi bi-check-circle"></i> ${venue.amenities || 'Full service available'}
-                `;
-            }
-            if (button) {
-                button.onclick = () => selectVenue(venue.venue_id, venue.venue_name);
-            }
-        }
-    });
+function updateVenueCards(venuesData) {
+    // This function updates venue cards if they exist on the page
+    // You can implement this if you have venue cards to update
+    console.log("Venues loaded:", venuesData);
 }
 
-function initEventListeners() {
-    // Check availability button
-    document.getElementById('checkAvailabilityBtn').addEventListener('click', checkAvailability);
-
-    // Form submission
-    document.getElementById('bookingForm').addEventListener('submit', submitBooking);
-
-    // Real-time validation
-    document.getElementById('expectedGuests').addEventListener('input', validateGuestCapacity);
-    document.getElementById('venueSelect').addEventListener('change', updateVenueSelection);
-}
-
-// Navigation functions
-function showSection(sectionName) {
-    // Hide all sections
-    document.querySelectorAll('.hero-section, .content-section').forEach(section => {
-        if (section.id === 'home-section') {
-            section.style.display = sectionName === 'home' ? 'block' : 'none';
-        } else {
-            section.classList.add('section-hidden');
-        }
-    });
-
-    // Show selected section
-    if (sectionName !== 'home') {
-        const section = document.getElementById(`${sectionName}-section`);
-        if (section) {
-            section.classList.remove('section-hidden');
-        }
-    }
-
-    // Special handling for booking section
-    if (sectionName === 'booking') {
-        resetBookingForm();
-    }
-}
-
-// Venue selection
-function selectVenue(venueId, venueName) {
-    selectedVenue = { id: venueId, name: venueName };
-    document.getElementById('venueSelect').value = venueId;
-    showSection('booking');
-    
-    // Show success message
-    showAlert('success', `${venueName} selected! Please fill out the booking form.`);
-}
-
-// Step navigation
 function nextStep(step) {
     if (validateCurrentStep()) {
         // Hide current step
@@ -499,7 +430,6 @@ function getFormData() {
     };
 }
 
-
 function showSuccessModal(formData, bookingId) {
     const venue = venues.find(v => v.venue_id == formData.venueId);
     const displayBookingId = bookingId || 'BK' + Date.now();
@@ -519,6 +449,7 @@ function showSuccessModal(formData, bookingId) {
     const modal = new bootstrap.Modal(document.getElementById('successModal'));
     modal.show();
 }
+
 // Utility functions
 function resetBookingForm() {
     document.getElementById('bookingForm').reset();
@@ -571,38 +502,3 @@ function formatTime(time) {
         hour12: true
     });
 }
-
-function toggleMobileMenu() {
-    const navLinks = document.querySelector('.nav-links');
-    navLinks.classList.toggle('active');
-}
-
-document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-        const target = document.querySelector(this.getAttribute('href'));
-        if (target) {
-            target.scrollIntoView({
-                behavior: 'smooth'
-            });
-        }
-    });
-});
-
-// Booking.js or separate JS file
-
-document.addEventListener("DOMContentLoaded", function () {
-    const signupBtn = document.querySelector(".signup");
-    const signinBtn = document.querySelector(".signin");
-
-    const signupModal = new bootstrap.Modal(document.getElementById("signupModal"));
-    const signinModal = new bootstrap.Modal(document.getElementById("signinModal"));
-
-    signupBtn.addEventListener("click", () => {
-        signupModal.show();
-    });
-
-    signinBtn.addEventListener("click", () => {
-        signinModal.show();
-    });
-});
