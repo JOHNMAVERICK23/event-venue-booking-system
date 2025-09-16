@@ -6,32 +6,129 @@
     <title>City of Dreams Manila - Event Venue Booking</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="index.css">
 </head>
 <body>
-    <header class="main-header">
-        <div class="header-container">
-          <div class="row align-items-center">
-            <div class="col-md-6">
-              <div class="logo">
-                <img src="Assets/city-of-dreams-logo.png" alt="logo" class="hotel-logo">
-                <h3>City of Dreams Manila</h3>
+  <div class="terms-modal" id="termsModal">
+      <div class="terms-content">
+          <div class="terms-close" id="closeTerms">X</div>
+          <h2 class="text-center mb-4">Terms and Conditions</h2>
+          <div class="terms-text">
+              <p>Welcome to City of Dreams Manila Event Venue Booking. By accessing our website and using our services, you agree to comply with and be bound by the following terms and conditions.</p>
+              
+              <div class="form-check mt-4">
+                  <input class="form-check-input" type="checkbox" id="agreeTerms">
+                  <label class="form-check-label" for="agreeTerms">
+                      I have read and agree to the terms and conditions
+                  </label>
               </div>
-            </div>
-            <div class="col-md-6">
-              <div class="nav-links">
-                <a class="nav-link active" href=" ">Home</a>
-                <a class="nav-link" href="venues.html">Venues</a>
-                <a class="btn btn-hero" href="booking.html">
-                  <i class="bi bi-calendar-check"></i> Book Your Event Now
-                </a>
-              </div>
-            </div>
+              
+              <button class="btn btn-primary mt-3 w-100" id="acceptTerms" disabled>Accept and Continue</button>
           </div>
-        </div>
-      </header>
-    <section id="home-section" class="hero-section">
-    </section>
+      </div>
+  </div>
+
+  <header class="main-header">
+      <div class="header-container">
+          <div class="row align-items-center">
+              <div class="col-md-6">
+                  <div class="logo">
+                      <img src="Assets/city-of-dreams-logo.png" alt="logo" class="hotel-logo">
+                      <h3>City of Dreams Manila</h3>
+                  </div>
+              </div>
+              <div class="col-md-6">
+                  <div class="nav-links">
+                      <a class="nav-link active" href="#">Home</a>
+                      <a class="nav-link" href="venues.html">Venues</a>
+                      <a class="nav-link" href="#contact">Contact</a>
+                      <a class="btn btn-hero" href="booking.html">
+                          <i class="bi bi-calendar-check"></i> Book Your Event Now
+                      </a>
+                  </div>
+              </div>
+          </div>
+      </div>
+  </header>
+
+  <section id="home-section" class="hero-section">
+      <div class="hero-content">
+          <h1 class="display-4 fw-bold">Premium Event Venues in Manila</h1>
+          <p class="lead">Experience luxury and sophistication for your next corporate event, wedding, or special celebration</p>
+          <a class="btn btn-hero" href="booking.html">
+              <i class="bi bi-calendar-check"></i> Book Your Event Now
+          </a>
+      </div>
+  </section>
+
+  <div class="content-spacer"></div>
+
+ 
+  <!-- Features Section -->
+  <section class="features-section">
+      <div class="container">
+          <h2 class="section-title">Why Choose Us</h2>
+          <div class="row">
+              <div class="col-md-4 mb-4">
+                  <div class="feature-box">
+                      <div class="feature-icon">
+                          <i class="bi bi-star-fill"></i>
+                      </div>
+                      <h3>Luxurious Venues</h3>
+                      <p>Our venues feature elegant designs, state-of-the-art technology, and premium amenities to impress your guests.</p>
+                  </div>
+              </div>
+              <div class="col-md-4 mb-4">
+                  <div class="feature-box">
+                      <div class="feature-icon">
+                          <i class="bi bi-people-fill"></i>
+                      </div>
+                      <h3>Expert Event Planning</h3>
+                      <p>Our professional event planners will work with you to create a seamless and memorable experience.</p>
+                  </div>
+              </div>
+              <div class="col-md-4 mb-4">
+                  <div class="feature-box">
+                      <div class="feature-icon">
+                          <i class="bi bi-egg-fried"></i>
+                      </div>
+                      <h3>Gourmet Catering</h3>
+                      <p>Enjoy exquisite culinary experiences with our world-class catering services and premium menus.</p>
+                  </div>
+              </div>
+          </div>
+      </div>
+  </section>
+
+  <!-- Contact Section -->
+  <section id="contact" class="contact-section">
+      <div class="container">
+          <h2 class="section-title">Contact Us</h2>
+          <div class="row">
+              <div class="col-md-6">
+                  <div class="contact-info">
+                      <p><i class="bi bi-geo-alt-fill"></i> Aseana Avenue, Parañaque City, Metro Manila</p>
+                      <p><i class="bi bi-telephone-fill"></i> (02) 800-8080</p>
+                      <p><i class="bi bi-envelope-fill"></i> events@cityofdreams.com</p>
+                  </div>
+              </div>
+              <div class="col-md-6">
+                  <div class="map-container">
+                      <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3863.136981668529!2d120.98462947574805!3d14.524865177568086!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3397c9e2bb3d4e5f%3A0x63ec2c12bd2b1b8d!2sCity%20of%20Dreams%20Manila!5e0!3m2!1sen!2sph!4v1689837253121!5m2!1sen!2sph" width="100%" height="200" style="border:0; border-radius: 10px;" allowfullscreen="" loading="lazy"></iframe>
+                  </div>
+              </div>
+          </div>
+      </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+      <div class="container">
+          <p>&copy; Copy Right 2025 Event-Venue-Booking-System. All rights reserved (Albania, John Maverick B.)</p>
+      </div>
+  </footer>
+    
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="index.js"></script>
 </body>

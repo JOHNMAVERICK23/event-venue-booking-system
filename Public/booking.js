@@ -1,10 +1,25 @@
-// Global variables
 const API_BASE = 'http://localhost:3000/api';
 let currentStep = 1;
-let venues = []; // Initialize as empty array
+let venues = [];
+let googleUser = null;
+let googleToken = null;
 
-// Initialize everything when DOM is loaded
 document.addEventListener("DOMContentLoaded", () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const venueId = urlParams.get("venueId");
+    const venueName = urlParams.get("venueName");
+
+    if (venueId && venueName) {
+        const venueSelect = document.getElementById("venueSelect");
+        if (venueSelect) {
+            venueSelect.innerHTML = `<option value="${venueId}" selected>${venueName}</option>`;
+            venueSelect.disabled = true; 
+        }
+        const venueInput = document.getElementById("selectedVenue");
+        if (venueInput) {
+            venueInput.value = venueName;
+        }
+    }
     initEventListeners();
     loadVenuesFromAPI();
 });
@@ -23,34 +38,16 @@ function initEventListeners() {
 
 async function loadVenuesFromAPI() {
     try {
-        // For public site, we don't need authentication to view venues
         const response = await fetch(`${API_BASE}/venues`, {
             method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            }
+            headers: { 'Content-Type': 'application/json' }
         });
         
         if (response.ok) {
             const apiVenues = await response.json();
             venues = apiVenues;
-            
-            // Update venue select dropdown
-            const venueSelect = document.getElementById('venueSelect');
-            venueSelect.innerHTML = '<option value="">Select a venue</option>';
-            
-            apiVenues.forEach(venue => {
-                const option = document.createElement('option');
-                option.value = venue.venue_id;
-                option.textContent = `${venue.venue_name} (${venue.capacity} guests) - ₱${venue.hourly_rate.toLocaleString()}/hr`;
-                venueSelect.appendChild(option);
-            });
-            
-            // Update static venue cards if they exist
-            updateVenueCards(apiVenues);
         } else {
             console.warn('Failed to load venues from API, using fallback data');
-            // Fallback to static venues
             venues = [
                 { venue_id: 1, venue_name: 'Grand Ballroom', capacity: 500, hourly_rate: 15000 },
                 { venue_id: 2, venue_name: 'Conference Hall A', capacity: 100, hourly_rate: 5000 },
@@ -59,18 +56,38 @@ async function loadVenuesFromAPI() {
         }
     } catch (error) {
         console.error('Error loading venues:', error);
-        // Use fallback venues
         venues = [
             { venue_id: 1, venue_name: 'Grand Ballroom', capacity: 500, hourly_rate: 15000 },
             { venue_id: 2, venue_name: 'Conference Hall A', capacity: 100, hourly_rate: 5000 },
             { venue_id: 3, venue_name: 'Garden Pavilion', capacity: 200, hourly_rate: 8000 }
         ];
     }
+
+    // Update venue select dropdown
+    const venueSelect = document.getElementById('venueSelect');
+    venueSelect.innerHTML = '<option value="">Select a venue</option>';
+
+    venues.forEach(venue => {
+        const option = document.createElement('option');
+        option.value = venue.venue_id;
+        option.setAttribute("data-name", venue.venue_name);
+        option.textContent = `${venue.venue_name} (${venue.capacity} guests) - ₱${venue.hourly_rate.toLocaleString()}/hr`;
+        venueSelect.appendChild(option);
+    });
+
+    // Auto-select galing sa URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    const venueId = urlParams.get("venueId");
+    if (venueId) {
+        venueSelect.value = venueId;
+        venueSelect.disabled = true; // lock
+    }
+
+    updateVenueCards(venues);
 }
 
+
 function updateVenueCards(venuesData) {
-    // This function updates venue cards if they exist on the page
-    // You can implement this if you have venue cards to update
     console.log("Venues loaded:", venuesData);
 }
 
@@ -103,6 +120,45 @@ function prevStep(step) {
     document.getElementById(`step${currentStep}`).classList.add('active');
 }
 
+function loadGoogleSignIn() {
+    gapi.load('auth2', function() {
+        gapi.auth2.init({
+            client_id: 'YOUR_GOOGLE_CLIENT_ID', 
+            cookiepolicy: 'single_host_origin',
+        }).then(function(auth2) {
+            // Attach click handler
+            const signInButton = document.getElementById('google-signin-button');
+            auth2.attachClickHandler(signInButton, {},
+                function(user) {
+                    // Successful sign-in
+                    googleUser = user;
+                    googleToken = user.getAuthResponse().id_token;
+                    document.getElementById('googleToken').value = googleToken;
+                    
+                    // Auto-fill ang email field kung blanko
+                    const emailField = document.getElementById('contactEmail');
+                    if (!emailField.value) {
+                        emailField.value = user.getBasicProfile().getEmail();
+                    }
+                    
+                    // I-update ang status
+                    document.getElementById('google-auth-status').textContent = 
+                        `Authenticated as: ${user.getBasicProfile().getEmail()}`;
+                    document.getElementById('google-auth-status').className = 
+                        'mt-2 small text-success';
+                },
+                function(error) {
+                    console.error('Google Sign-In error:', error);
+                    document.getElementById('google-auth-status').textContent = 
+                        'Error during authentication. Please try again.';
+                    document.getElementById('google-auth-status').className = 
+                        'mt-2 small text-danger';
+                }
+            );
+        });
+    });
+}
+
 // Form validation
 function validateCurrentStep() {
     if (currentStep === 1) {
@@ -123,6 +179,20 @@ function validateCurrentStep() {
             return false;
         }
 
+        // Validate phone number
+        const phone = document.getElementById('contactPhone').value;
+        if (!isValidPhone(phone)) {
+            showAlert('danger', 'Please enter a valid phone number');
+            return false;
+        }
+
+        // Validate Google authentication
+        const googleToken = document.getElementById('googleToken');
+        if (!googleToken || !googleToken.value.trim()) {
+            showAlert('danger', 'Please authenticate with Google to continue');
+            return false;
+        }
+
         // Validate guest capacity
         return validateGuestCapacity();
     } else if (currentStep === 2) {
@@ -132,6 +202,24 @@ function validateCurrentStep() {
                 showAlert('danger', 'Please fill in all date and time fields');
                 return false;
             }
+        }
+
+        // Validate date is not in the past
+        const eventDate = new Date(document.getElementById('eventDate').value);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        if (eventDate < today) {
+            showAlert('danger', 'Please select a future date');
+            return false;
+        }
+
+        // Validate time order
+        const startTime = document.getElementById('startTime').value;
+        const endTime = document.getElementById('endTime').value;
+        if (startTime >= endTime) {
+            showAlert('danger', 'End time must be after start time');
+            return false;
         }
 
         // Validate venue selection
@@ -150,6 +238,11 @@ function validateCurrentStep() {
         return true;
     }
     return true;
+}
+
+// Add phone validation function
+function isValidPhone(phone) {
+    return /^[+]?[\d\s\-()]{10,}$/.test(phone);
 }
 
 function validateGuestCapacity() {
@@ -189,6 +282,16 @@ async function checkAvailability() {
 
     if (startTime >= endTime) {
         showAlert('danger', 'End time must be after start time');
+        return;
+    }
+
+    // Validate date is not in the past
+    const selectedDate = new Date(eventDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (selectedDate < today) {
+        showAlert('danger', 'Please select a future date');
         return;
     }
 
@@ -235,6 +338,7 @@ async function checkAvailability() {
                 </div>
             `;
             document.getElementById('nextToConfirm').disabled = false;
+            sessionStorage.setItem('venueAvailable', 'true');
         } else {
             resultDiv.className = 'availability-result not-available';
             let conflictMessage = 'Sorry, the venue is not available for this time slot.';
@@ -258,6 +362,7 @@ async function checkAvailability() {
                 </div>
             `;
             document.getElementById('nextToConfirm').disabled = true;
+            sessionStorage.setItem('venueAvailable', 'false');
         }
 
     } catch (error) {
@@ -358,11 +463,13 @@ async function submitBooking(e) {
                 contactPhone: formData.contactPhone,
                 eventType: formData.eventType,
                 venueId: parseInt(formData.venueId),
+                venueName: formData.venueName,
                 eventDate: formData.eventDate,
                 startTime: formData.startTime,
                 endTime: formData.endTime,
                 expectedGuests: parseInt(formData.expectedGuests),
-                specialRequests: formData.specialRequests
+                specialRequests: formData.specialRequests,
+                googleToken: formData.googleToken
             })
         });
         
@@ -391,44 +498,54 @@ async function submitBooking(e) {
 function normalizeTime(time) {
     if (!time) return null;
 
-    // Kapag format ay HH:mm lang, dagdagan ng :00
+    // Handle HH:mm format
     if (/^\d{1,2}:\d{2}$/.test(time)) {
-        return time + ":00";
+        const [hours, minutes] = time.split(':');
+        return `${hours.padStart(2, '0')}:${minutes}:00`;
     }
 
-    // Kapag format ay HH:mm:ss na, iwan lang
+    // Handle HH:mm:ss format
     if (/^\d{1,2}:\d{2}:\d{2}$/.test(time)) {
-        return time;
+        const [hours, minutes] = time.split(':');
+        return `${hours.padStart(2, '0')}:${minutes}:00`;
     }
 
     // Kapag may AM/PM format (e.g. 4:58 AM)
     const match = time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
     if (match) {
-        let hour = parseInt(match[1], 10);
-        const minute = match[2];
+        let hours = parseInt(match[1], 10);
+        const minutes = match[2];
         const meridian = match[3].toUpperCase();
-        if (meridian === "PM" && hour < 12) hour += 12;
-        if (meridian === "AM" && hour === 12) hour = 0;
-        return `${hour.toString().padStart(2, "0")}:${minute}:00`;
+        
+        if (meridian === "PM" && hours < 12) hours += 12;
+        if (meridian === "AM" && hours === 12) hours = 0;
+        
+        return `${hours.toString().padStart(2, "0")}:${minutes}:00`;
     }
 
-    return null; // fallback kung totally invalid
+    return null;
 }
 
 function getFormData() {
+    const venueSelect = document.getElementById('venueSelect');
+    const selectedOption = venueSelect.options[venueSelect.selectedIndex];
+    
     return {
         clientName: document.getElementById('clientName').value,
         eventType: document.getElementById('eventType').value,
         contactEmail: document.getElementById('contactEmail').value,
         contactPhone: document.getElementById('contactPhone').value,
         expectedGuests: document.getElementById('expectedGuests').value,
-        venueId: document.getElementById('venueSelect').value,
+        venueId: venueSelect.value,
+        venueName: selectedOption ? selectedOption.text : "",
         eventDate: document.getElementById('eventDate').value,      
         startTime: normalizeTime(document.getElementById('startTime').value),
         endTime: normalizeTime(document.getElementById('endTime').value),       
-        specialRequests: document.getElementById('specialRequests').value
+        specialRequests: document.getElementById('specialRequests').value,
+        googleToken: document.getElementById('googleToken').value
     };
 }
+
 
 function showSuccessModal(formData, bookingId) {
     const venue = venues.find(v => v.venue_id == formData.venueId);
@@ -446,9 +563,16 @@ function showSuccessModal(formData, bookingId) {
         </div>
     `;
     
+    // Show the modal
     const modal = new bootstrap.Modal(document.getElementById('successModal'));
     modal.show();
+    
+    // Reset form after modal is hidden
+    document.getElementById('successModal').addEventListener('hidden.bs.modal', function () {
+        resetBookingForm();
+    });
 }
+
 
 // Utility functions
 function resetBookingForm() {
@@ -501,4 +625,33 @@ function formatTime(time) {
         minute: '2-digit',
         hour12: true
     });
+}
+
+function handleGoogleSignIn(response) {
+    googleToken = response.credential;
+    googleUser = parseJwt(googleToken);
+    
+    // Auto-fill the email field if empty
+    if (googleUser && googleUser.email && !document.getElementById('contactEmail').value) {
+        document.getElementById('contactEmail').value = googleUser.email;
+    }
+    
+    // Update authentication status
+    const authStatus = document.getElementById('google-auth-status');
+    if (googleUser) {
+        authStatus.textContent = `Authenticated as: ${googleUser.email}`;
+        authStatus.className = 'auth-status authenticated';
+        document.getElementById('googleToken').value = googleToken;
+    } else {
+        authStatus.textContent = 'Authentication failed. Please try again.';
+        authStatus.className = 'auth-status error';
+    }
+}
+
+function parseJwt(token) {
+    try {
+        return JSON.parse(atob(token.split('.')[1]));
+    } catch (e) {
+        return null;
+    }
 }

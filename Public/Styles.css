@@ -105,8 +105,8 @@ body {
 
 
 .btn-hero {
-    padding: 0.9rem 0.5rem;
-    font-size: 1rem;
+    padding: 0.8rem 0.2rem;
+    font-size: 0.8rem;
     border-radius: 30px;
     border: none;
     background: whitesmoke;
@@ -123,8 +123,6 @@ body {
     transform: translateY(-3px);
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
 }
-
-/* Content Sections */
 .content-section {
     background: white;
     border-radius: 20px;
@@ -172,7 +170,7 @@ body {
 }
 
 .venue-image2 {
-    height: 150px;
+    height: 145px;
     background: linear-gradient(45deg, var(--secondary-color), var(--primary-color));
     display: flex;
     align-items: center;
@@ -415,9 +413,10 @@ body {
 }
 
 .availability-result {
-    margin: 1rem 0;
-    padding: 1rem;
-    border-radius: 10px;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 15px 0;
+    font-size: 0.95rem;
 }
 
 .available {
@@ -430,6 +429,22 @@ body {
     background: rgba(231, 76, 60, 0.1);
     border-left: 4px solid var(--accent-color);
     color: var(--accent-color);
+}
+
+.is-invalid {
+    border-color: #dc3545 !important;
+}
+
+.invalid-feedback {
+    display: none;
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: #dc3545;
+}
+
+.is-invalid ~ .invalid-feedback {
+    display: block;
 }
 
 /* Admin Dashboard Styles */
@@ -673,3 +688,50 @@ canvas {
     background: #e67e22;
     border-color: #e67e22;
 }
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem; /* space sa pagitan ng Book button at Google button */
+}
+
+.header-actions .btn-hero {
+    margin: 0;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.auth-status {
+    font-size: 0.8rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.auth-status.authenticated {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.auth-status.error {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.loading {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+  

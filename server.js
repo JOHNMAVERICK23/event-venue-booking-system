@@ -9,6 +9,8 @@ const { v4: uuidv4 } = require('uuid');
 const app = express();
 const path = require('path');
 const PORT = process.env.PORT || 3000;
+const { OAuth2Client } = require('google-auth-library');
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 
 app.use(express.static(path.join(__dirname, 'public')));
@@ -36,6 +38,20 @@ sql.connect(dbConfig).then(p => {
 }).catch(err => {
     console.error('Database connection failed:', err);
 });
+
+async function verifyGoogleToken(token) {
+    try {
+        const ticket = await googleClient.verifyIdToken({
+            idToken: token,
+            audience: process.env.GOOGLE_CLIENT_ID
+        });
+        const payload = ticket.getPayload();
+        return payload;
+    } catch (error) {
+        console.error('Error verifying Google token:', error);
+        return null;
+    }
+}
 
 async function hashPassword() {
     const password = "admin123"; 
@@ -147,7 +163,9 @@ app.post('/api/venues/availability', async (req, res) => {
         const result = await request.query(query);
 
         if (result.recordset.length > 0) {
-            res.json({ available: false, conflicts: result.recordset });
+            res.json({ available: false, 
+                conflicts: result.recordset,
+                message: 'Venue is already booked for the selected time slot' });
         } else {
             res.json({ available: true });
         }
@@ -169,10 +187,25 @@ app.post('/api/bookings', async (req, res) => {
         startTime, 
         endTime, 
         expectedGuests, 
-        specialRequests 
+        specialRequests ,
+        googleToken
     } = req.body;
     
     try {
+        if (!googleToken) {
+            return res.status(400).json({ error: 'Google authentication required' });
+        }
+        
+        const googleUser = await verifyGoogleToken(googleToken);
+        if (!googleUser) {
+            return res.status(400).json({ error: 'Invalid Google authentication' });
+        }
+        
+        // Ensure the email matches the provided contact email
+        if (googleUser.email !== contactEmail) {
+            return res.status(400).json({ error: 'Google account email does not match provided email' });
+        }
+
         // Check availability again before booking
         const availabilityCheck = await pool.request()
             .input('venueId', sql.Int, venueId)
@@ -206,6 +239,7 @@ app.post('/api/bookings', async (req, res) => {
             .input('endTime', sql.NVarChar, endTime)
             .input('expectedGuests', sql.Int, expectedGuests)
             .input('specialRequests', sql.NVarChar, specialRequests)
+            .input('googleId', sql.NVarChar, googleUser.sub) 
             .query(`
                 INSERT INTO event_bookings (
                     client_name, contact_email, contact_phone, event_type, 

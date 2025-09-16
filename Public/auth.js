@@ -168,5 +168,5 @@ function startTokenRefresh() {
 // Initialize token refresh for authenticated sessions
 if (localStorage.getItem('adminToken')) {
     // Uncomment for production with real backend
-    //startTokenRefresh();
+    startTokenRefresh();
 }
