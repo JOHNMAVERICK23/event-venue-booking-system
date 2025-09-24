@@ -62,17 +62,59 @@ async function handleAdminLogin(e) {
 function initEventListeners() {
     document.getElementById('adminLoginForm').addEventListener('submit', handleAdminLogin);
 }
+
 function showAlert(type, message) {
-    const alertContainer = document.querySelector('.container');
+    // Remove existing alerts
+    const existingAlerts = document.querySelectorAll('.custom-alert');
+    existingAlerts.forEach(alert => alert.remove());
+    
+    // Create new alert
     const alert = document.createElement('div');
-    alert.className = `alert alert-${type} alert-dismissible fade show`;
+    alert.className = `custom-alert alert-${type}`;
     alert.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `; 
-    alertContainer.insertAdjacentElement('afterbegin', alert);
+        <span>${message}</span>
+        <button type="button" class="alert-close" onclick="this.parentElement.remove()">×</button>
+    `;
+    
+    // Add styles if not exists
+    if (!document.querySelector('#alert-styles')) {
+        const styles = document.createElement('style');
+        styles.id = 'alert-styles';
+        styles.textContent = `
+            .custom-alert {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                border-radius: 5px;
+                color: white;
+                z-index: 1000;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                min-width: 300px;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            }
+            .alert-danger { background-color: #dc3545; }
+            .alert-success { background-color: #28a745; }
+            .alert-warning { background-color: #ffc107; color: #000; }
+            .alert-close {
+                background: none;
+                border: none;
+                color: inherit;
+                font-size: 20px;
+                cursor: pointer;
+                margin-left: 15px;
+            }
+        `;
+        document.head.appendChild(styles);
+    }
+    
+    document.body.appendChild(alert);
+    
+    // Auto-remove after 5 seconds
     setTimeout(() => {
-        if (alert.parentNode) {
+        if (alert.parentElement) {
             alert.remove();
         }
     }, 5000);

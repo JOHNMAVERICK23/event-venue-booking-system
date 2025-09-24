@@ -22,6 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     initEventListeners();
     loadVenuesFromAPI();
+    checkPersistedAuth();
 });
 
 function initEventListeners() {
@@ -34,7 +35,72 @@ function initEventListeners() {
     // Real-time validation
     document.getElementById('expectedGuests').addEventListener('input', validateGuestCapacity);
     document.getElementById('venueSelect').addEventListener('change', updateVenueSelection);
+    document.getElementById('google-signout').addEventListener('click', handleGoogleSignOut);
 }
+
+function checkPersistedAuth() {
+    const savedAuth = localStorage.getItem('googleAuth');
+    const savedUser = localStorage.getItem('googleUser');
+    
+    if (savedAuth && savedUser) {
+        try {
+            googleToken = savedAuth;
+            googleUser = JSON.parse(savedUser);
+            
+            // Update UI to show authenticated state
+            updateAuthUI(googleUser);
+            
+            // Auto-fill email if empty
+            const emailField = document.getElementById('contactEmail');
+            if (!emailField.value && googleUser.email) {
+                emailField.value = googleUser.email;
+            }
+            
+            console.log('User authentication restored from storage');
+        } catch (error) {
+            console.error('Error restoring authentication:', error);
+            clearAuthStorage();
+        }
+    }
+}
+
+function clearAuthStorage() {
+    localStorage.removeItem('googleAuth');
+    localStorage.removeItem('googleUser');
+}
+
+function saveAuthToStorage(token, user) {
+    localStorage.setItem('googleAuth', token);
+    localStorage.setItem('googleUser', JSON.stringify(user));
+}
+
+function updateAuthUI(user) {
+    const authStatus = document.getElementById('google-auth-status');
+    const signOutBtn = document.getElementById('google-signout');
+    
+    if (user) {
+        authStatus.textContent = `Authenticated as: ${user.email}`;
+        authStatus.className = 'auth-status authenticated text-success';
+        signOutBtn.style.display = 'block';
+        
+        // Hide Google sign-in button
+        const googleSignInBtn = document.querySelector('.g_id_signin');
+        if (googleSignInBtn) {
+            googleSignInBtn.style.display = 'none';
+        }
+    } else {
+        authStatus.textContent = 'No Account login';
+        authStatus.className = 'auth-status text-muted';
+        signOutBtn.style.display = 'none';
+        
+        // Show Google sign-in button
+        const googleSignInBtn = document.querySelector('.g_id_signin');
+        if (googleSignInBtn) {
+            googleSignInBtn.style.display = 'block';
+        }
+    }
+}
+
 
 async function loadVenuesFromAPI() {
     try {
@@ -84,6 +150,39 @@ async function loadVenuesFromAPI() {
     }
 
     updateVenueCards(venues);
+}
+
+function handleGoogleSignOut() {
+    // Clear local storage
+    clearAuthStorage();
+    
+    // Clear variables
+    googleUser = null;
+    googleToken = null;
+    
+    // Update UI
+    updateAuthUI(null);
+    document.getElementById('googleToken').value = '';
+    
+    // Reset Google Sign-In button (reload the Google script)
+    reloadGoogleSignIn();
+    
+    console.log('User signed out successfully');
+}
+
+function reloadGoogleSignIn() {
+    // Remove existing Google script
+    const oldScript = document.querySelector('script[src*="accounts.google.com/gsi/client"]');
+    if (oldScript) {
+        oldScript.remove();
+    }
+    
+    // Create new script
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    document.head.appendChild(script);
 }
 
 
@@ -187,8 +286,7 @@ function validateCurrentStep() {
         }
 
         // Validate Google authentication
-        const googleToken = document.getElementById('googleToken');
-        if (!googleToken || !googleToken.value.trim()) {
+        if (!googleToken) {
             showAlert('danger', 'Please authenticate with Google to continue');
             return false;
         }
@@ -442,6 +540,11 @@ function populateBookingSummary() {
 // Form submission with actual API call
 async function submitBooking(e) {
     e.preventDefault();
+
+    if (!googleToken) {
+        showAlert('danger', 'Please re-authenticate with Google before submitting');
+        return;
+    }
     
     const submitBtn = document.getElementById('submitBookingBtn');
     const originalText = submitBtn.innerHTML;
@@ -469,7 +572,7 @@ async function submitBooking(e) {
                 endTime: formData.endTime,
                 expectedGuests: parseInt(formData.expectedGuests),
                 specialRequests: formData.specialRequests,
-                googleToken: formData.googleToken
+                googleToken: googleToken
             })
         });
         
@@ -597,19 +700,60 @@ function resetBookingForm() {
 }
 
 function showAlert(type, message) {
-    const alertContainer = document.querySelector('.container');
+    // Remove existing alerts
+    const existingAlerts = document.querySelectorAll('.custom-alert');
+    existingAlerts.forEach(alert => alert.remove());
+    
+    // Create new alert
     const alert = document.createElement('div');
-    alert.className = `alert alert-${type} alert-dismissible fade show`;
+    alert.className = `custom-alert alert-${type}`;
     alert.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `; 
-    alertContainer.insertAdjacentElement('afterbegin', alert);
+        <span>${message}</span>
+        <button type="button" class="alert-close" onclick="this.parentElement.remove()">×</button>
+    `;
+    
+    // Add styles if not exists
+    if (!document.querySelector('#alert-styles')) {
+        const styles = document.createElement('style');
+        styles.id = 'alert-styles';
+        styles.textContent = `
+            .custom-alert {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                border-radius: 5px;
+                color: white;
+                z-index: 1000;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                min-width: 300px;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            }
+            .alert-danger { background-color: #dc3545; }
+            .alert-success { background-color: #28a745; }
+            .alert-warning { background-color: #ffc107; color: #000; }
+            .alert-close {
+                background: none;
+                border: none;
+                color: inherit;
+                font-size: 20px;
+                cursor: pointer;
+                margin-left: 15px;
+            }
+        `;
+        document.head.appendChild(styles);
+    }
+    
+    document.body.appendChild(alert);
+    
+    // Auto-remove after 5 seconds
     setTimeout(() => {
-        if (alert.parentNode) {
+        if (alert.parentElement) {
             alert.remove();
         }
-    }, 5000);
+    }, 2000);
 }
 
 function formatTime(time) {
@@ -630,6 +774,8 @@ function formatTime(time) {
 function handleGoogleSignIn(response) {
     googleToken = response.credential;
     googleUser = parseJwt(googleToken);
+
+    saveAuthToStorage(googleToken, googleUser);
     
     // Auto-fill the email field if empty
     if (googleUser && googleUser.email && !document.getElementById('contactEmail').value) {
@@ -646,6 +792,7 @@ function handleGoogleSignIn(response) {
         authStatus.textContent = 'Authentication failed. Please try again.';
         authStatus.className = 'auth-status error';
     }
+
 }
 
 function parseJwt(token) {
