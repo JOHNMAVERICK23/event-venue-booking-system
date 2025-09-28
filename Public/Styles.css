@@ -758,4 +758,11 @@ canvas {
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+
+.footer {
+    background: #1a252f;
+    color: white;
+    padding: 3rem 0;
+    text-align: center;
+}
   
