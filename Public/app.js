@@ -225,7 +225,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const calendarEl = document.getElementById('calendar');
         if (!calendarEl) return;
     
-        // siguraduhin visible yung container bago mag render
+        
         const section = document.getElementById('calendar-section');
         section.classList.remove('d-none');
     
@@ -244,7 +244,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             const events = await response.json();
                             successCallback(events);
                         } else {
-                            // fallback: use local bookings
+                        
                             const events = bookings.map(booking => ({
                                 id: booking.booking_id,
                                 title: `${booking.venue_name} - ${booking.client_name} (${booking.event_type})`,

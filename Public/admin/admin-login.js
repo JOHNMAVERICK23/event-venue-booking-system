@@ -64,11 +64,9 @@ function initEventListeners() {
 }
 
 function showAlert(type, message) {
-    // Remove existing alerts
     const existingAlerts = document.querySelectorAll('.custom-alert');
     existingAlerts.forEach(alert => alert.remove());
     
-    // Create new alert
     const alert = document.createElement('div');
     alert.className = `custom-alert alert-${type}`;
     alert.innerHTML = `
@@ -76,7 +74,6 @@ function showAlert(type, message) {
         <button type="button" class="alert-close" onclick="this.parentElement.remove()">×</button>
     `;
     
-    // Add styles if not exists
     if (!document.querySelector('#alert-styles')) {
         const styles = document.createElement('style');
         styles.id = 'alert-styles';
@@ -112,7 +109,6 @@ function showAlert(type, message) {
     
     document.body.appendChild(alert);
     
-    // Auto-remove after 5 seconds
     setTimeout(() => {
         if (alert.parentElement) {
             alert.remove();

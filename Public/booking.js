@@ -26,13 +26,13 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function initEventListeners() {
-    // Check availability button
+  
     document.getElementById('checkAvailabilityBtn').addEventListener('click', checkAvailability);
 
-    // Form submission
+   
     document.getElementById('bookingForm').addEventListener('submit', submitBooking);
 
-    // Real-time validation
+   
     document.getElementById('expectedGuests').addEventListener('input', validateGuestCapacity);
     document.getElementById('venueSelect').addEventListener('change', updateVenueSelection);
     document.getElementById('google-signout').addEventListener('click', handleGoogleSignOut);
@@ -47,10 +47,10 @@ function checkPersistedAuth() {
             googleToken = savedAuth;
             googleUser = JSON.parse(savedUser);
             
-            // Update UI to show authenticated state
+            
             updateAuthUI(googleUser);
             
-            // Auto-fill email if empty
+          
             const emailField = document.getElementById('contactEmail');
             if (!emailField.value && googleUser.email) {
                 emailField.value = googleUser.email;
@@ -83,7 +83,6 @@ function updateAuthUI(user) {
         authStatus.className = 'auth-status authenticated text-success';
         signOutBtn.style.display = 'block';
         
-        // Hide Google sign-in button
         const googleSignInBtn = document.querySelector('.g_id_signin');
         if (googleSignInBtn) {
             googleSignInBtn.style.display = 'none';
@@ -93,7 +92,6 @@ function updateAuthUI(user) {
         authStatus.className = 'auth-status text-muted';
         signOutBtn.style.display = 'none';
         
-        // Show Google sign-in button
         const googleSignInBtn = document.querySelector('.g_id_signin');
         if (googleSignInBtn) {
             googleSignInBtn.style.display = 'block';
@@ -129,7 +127,6 @@ async function loadVenuesFromAPI() {
         ];
     }
 
-    // Update venue select dropdown
     const venueSelect = document.getElementById('venueSelect');
     venueSelect.innerHTML = '<option value="">Select a venue</option>';
 
@@ -141,43 +138,37 @@ async function loadVenuesFromAPI() {
         venueSelect.appendChild(option);
     });
 
-    // Auto-select galing sa URL params
     const urlParams = new URLSearchParams(window.location.search);
     const venueId = urlParams.get("venueId");
     if (venueId) {
         venueSelect.value = venueId;
-        venueSelect.disabled = true; // lock
+        venueSelect.disabled = true; 
     }
 
     updateVenueCards(venues);
 }
 
 function handleGoogleSignOut() {
-    // Clear local storage
+   
     clearAuthStorage();
-    
-    // Clear variables
+ 
     googleUser = null;
     googleToken = null;
-    
-    // Update UI
+ 
     updateAuthUI(null);
     document.getElementById('googleToken').value = '';
     
-    // Reset Google Sign-In button (reload the Google script)
     reloadGoogleSignIn();
     
     console.log('User signed out successfully');
 }
 
 function reloadGoogleSignIn() {
-    // Remove existing Google script
     const oldScript = document.querySelector('script[src*="accounts.google.com/gsi/client"]');
     if (oldScript) {
         oldScript.remove();
     }
     
-    // Create new script
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
@@ -192,16 +183,13 @@ function updateVenueCards(venuesData) {
 
 function nextStep(step) {
     if (validateCurrentStep()) {
-        // Hide current step
         document.getElementById(`booking-step-${currentStep}`).classList.remove('active');
         document.getElementById(`step${currentStep}`).classList.add('completed');
 
-        // Show next step
         currentStep = step;
         document.getElementById(`booking-step-${currentStep}`).classList.add('active');
         document.getElementById(`step${currentStep}`).classList.add('active');
 
-        // If moving to step 3, populate summary
         if (currentStep === 3) {
             populateBookingSummary();
         }
@@ -209,11 +197,9 @@ function nextStep(step) {
 }
 
 function prevStep(step) {
-    // Hide current step
     document.getElementById(`booking-step-${currentStep}`).classList.remove('active');
     document.getElementById(`step${currentStep}`).classList.remove('active');
 
-    // Show previous step
     currentStep = step;
     document.getElementById(`booking-step-${currentStep}`).classList.add('active');
     document.getElementById(`step${currentStep}`).classList.add('active');
@@ -225,22 +211,21 @@ function loadGoogleSignIn() {
             client_id: 'YOUR_GOOGLE_CLIENT_ID', 
             cookiepolicy: 'single_host_origin',
         }).then(function(auth2) {
-            // Attach click handler
             const signInButton = document.getElementById('google-signin-button');
             auth2.attachClickHandler(signInButton, {},
                 function(user) {
-                    // Successful sign-in
+    
                     googleUser = user;
                     googleToken = user.getAuthResponse().id_token;
                     document.getElementById('googleToken').value = googleToken;
                     
-                    // Auto-fill ang email field kung blanko
+                
                     const emailField = document.getElementById('contactEmail');
                     if (!emailField.value) {
                         emailField.value = user.getBasicProfile().getEmail();
                     }
                     
-                    // I-update ang status
+                    
                     document.getElementById('google-auth-status').textContent = 
                         `Authenticated as: ${user.getBasicProfile().getEmail()}`;
                     document.getElementById('google-auth-status').className = 
@@ -258,7 +243,7 @@ function loadGoogleSignIn() {
     });
 }
 
-// Form validation
+
 function validateCurrentStep() {
     if (currentStep === 1) {
         const required = ['clientName', 'eventType', 'contactEmail', 'contactPhone', 'expectedGuests'];
@@ -271,27 +256,27 @@ function validateCurrentStep() {
             }
         }
 
-        // Validate email
+        
         const email = document.getElementById('contactEmail').value;
         if (!isValidEmail(email)) {
             showAlert('danger', 'Please enter a valid email address');
             return false;
         }
 
-        // Validate phone number
+        
         const phone = document.getElementById('contactPhone').value;
         if (!isValidPhone(phone)) {
             showAlert('danger', 'Please enter a valid phone number');
             return false;
         }
 
-        // Validate Google authentication
+        
         if (!googleToken) {
             showAlert('danger', 'Please authenticate with Google to continue');
             return false;
         }
 
-        // Validate guest capacity
+        
         return validateGuestCapacity();
     } else if (currentStep === 2) {
         const required = ['eventDate', 'startTime', 'endTime'];
@@ -302,7 +287,7 @@ function validateCurrentStep() {
             }
         }
 
-        // Validate date is not in the past
+        
         const eventDate = new Date(document.getElementById('eventDate').value);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -312,7 +297,7 @@ function validateCurrentStep() {
             return false;
         }
 
-        // Validate time order
+        
         const startTime = document.getElementById('startTime').value;
         const endTime = document.getElementById('endTime').value;
         if (startTime >= endTime) {
@@ -320,13 +305,13 @@ function validateCurrentStep() {
             return false;
         }
 
-        // Validate venue selection
+        
         if (!document.getElementById('venueSelect').value) {
             showAlert('danger', 'Please select a venue');
             return false;
         }
 
-        // Check if availability was confirmed
+        
         const availabilityResult = document.getElementById('availabilityResult');
         if (!availabilityResult.classList.contains('available')) {
             showAlert('danger', 'Please check venue availability first');
@@ -338,7 +323,7 @@ function validateCurrentStep() {
     return true;
 }
 
-// Add phone validation function
+
 function isValidPhone(phone) {
     return /^[+]?[\d\s\-()]{10,}$/.test(phone);
 }
@@ -361,12 +346,12 @@ function isValidEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-// Venue and form updates
+
 function updateVenueSelection() {
     validateGuestCapacity();
 }
 
-// Availability checking with actual API call
+
 async function checkAvailability() {
     const venueId = document.getElementById('venueSelect').value;
     const eventDate = document.getElementById('eventDate').value;
@@ -383,7 +368,7 @@ async function checkAvailability() {
         return;
     }
 
-    // Validate date is not in the past
+   
     const selectedDate = new Date(eventDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -393,14 +378,14 @@ async function checkAvailability() {
         return;
     }
 
-    // Show loading state
+ 
     const btn = document.getElementById('checkAvailabilityBtn');
     const originalText = btn.innerHTML;
     btn.innerHTML = '<span class="loading"></span> Checking...';
     btn.disabled = true;
 
     try {
-        // Call actual API for availability check
+      
         const response = await fetch(`${API_BASE}/venues/availability`, {
             method: 'POST',
             headers: {
@@ -467,7 +452,7 @@ async function checkAvailability() {
         showAlert('danger', 'Error checking availability. Please try again.');
         console.error('Availability check error:', error);
         
-        // Show error state
+
         const resultDiv = document.getElementById('availabilityResult');
         resultDiv.style.display = 'block';
         resultDiv.className = 'availability-result not-available';
@@ -487,7 +472,7 @@ async function checkAvailability() {
     }
 }
 
-// Booking summary
+
 function populateBookingSummary() {
     const formData = getFormData();
     const venue = venues.find(v => v.venue_id == formData.venueId);
@@ -537,7 +522,7 @@ function populateBookingSummary() {
     `;
 }
 
-// Form submission with actual API call
+
 async function submitBooking(e) {
     e.preventDefault();
 
@@ -554,7 +539,7 @@ async function submitBooking(e) {
     try {
         const formData = getFormData();
         
-        // Call the actual API
+
         const response = await fetch(`${API_BASE}/bookings`, {
             method: 'POST',
             headers: {
@@ -583,10 +568,8 @@ async function submitBooking(e) {
         
         const bookingResult = await response.json();
         
-        // Show success modal with real booking ID
         showSuccessModal(formData, bookingResult.booking_id);
         
-        // Reset form
         resetBookingForm();
         
     } catch (error) {
@@ -601,19 +584,16 @@ async function submitBooking(e) {
 function normalizeTime(time) {
     if (!time) return null;
 
-    // Handle HH:mm format
     if (/^\d{1,2}:\d{2}$/.test(time)) {
         const [hours, minutes] = time.split(':');
         return `${hours.padStart(2, '0')}:${minutes}:00`;
     }
 
-    // Handle HH:mm:ss format
     if (/^\d{1,2}:\d{2}:\d{2}$/.test(time)) {
         const [hours, minutes] = time.split(':');
         return `${hours.padStart(2, '0')}:${minutes}:00`;
     }
 
-    // Kapag may AM/PM format (e.g. 4:58 AM)
     const match = time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
     if (match) {
         let hours = parseInt(match[1], 10);
@@ -666,45 +646,40 @@ function showSuccessModal(formData, bookingId) {
         </div>
     `;
     
-    // Show the modal
+
     const modal = new bootstrap.Modal(document.getElementById('successModal'));
     modal.show();
     
-    // Reset form after modal is hidden
+ 
     document.getElementById('successModal').addEventListener('hidden.bs.modal', function () {
         resetBookingForm();
     });
 }
 
 
-// Utility functions
+
 function resetBookingForm() {
     document.getElementById('bookingForm').reset();
     currentStep = 1;
     
-    // Reset step indicators
     document.querySelectorAll('.step').forEach(step => {
         step.classList.remove('active', 'completed');
     });
     document.getElementById('step1').classList.add('active');
     
-    // Show first step
     document.querySelectorAll('.booking-step').forEach(step => {
         step.classList.remove('active');
     });
     document.getElementById('booking-step-1').classList.add('active');
     
-    // Reset availability
     document.getElementById('availabilityResult').style.display = 'none';
     document.getElementById('nextToConfirm').disabled = true;
 }
 
 function showAlert(type, message) {
-    // Remove existing alerts
     const existingAlerts = document.querySelectorAll('.custom-alert');
     existingAlerts.forEach(alert => alert.remove());
     
-    // Create new alert
     const alert = document.createElement('div');
     alert.className = `custom-alert alert-${type}`;
     alert.innerHTML = `
@@ -712,7 +687,6 @@ function showAlert(type, message) {
         <button type="button" class="alert-close" onclick="this.parentElement.remove()">×</button>
     `;
     
-    // Add styles if not exists
     if (!document.querySelector('#alert-styles')) {
         const styles = document.createElement('style');
         styles.id = 'alert-styles';
@@ -748,7 +722,7 @@ function showAlert(type, message) {
     
     document.body.appendChild(alert);
     
-    // Auto-remove after 5 seconds
+    
     setTimeout(() => {
         if (alert.parentElement) {
             alert.remove();
@@ -777,12 +751,11 @@ function handleGoogleSignIn(response) {
 
     saveAuthToStorage(googleToken, googleUser);
     
-    // Auto-fill the email field if empty
+    
     if (googleUser && googleUser.email && !document.getElementById('contactEmail').value) {
         document.getElementById('contactEmail').value = googleUser.email;
     }
     
-    // Update authentication status
     const authStatus = document.getElementById('google-auth-status');
     if (googleUser) {
         authStatus.textContent = `Authenticated as: ${googleUser.email}`;

@@ -120,7 +120,7 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-// Public venue endpoint (no authentication required)
+
 app.get('/api/venues', async (req, res) => {
     try {
         const result = await pool.request()
@@ -133,7 +133,7 @@ app.get('/api/venues', async (req, res) => {
     }
 });
 
-// Public availability check (no authentication required)
+
 app.post('/api/venues/availability', async (req, res) => {
     const { venueId, date, startTime, endTime, excludeBookingId } = req.body;
 
@@ -175,7 +175,7 @@ app.post('/api/venues/availability', async (req, res) => {
     }
 });
 
-// Public booking creation (no authentication required)
+
 app.post('/api/bookings', async (req, res) => {
     const { 
         clientName, 
@@ -201,12 +201,12 @@ app.post('/api/bookings', async (req, res) => {
             return res.status(400).json({ error: 'Invalid Google authentication' });
         }
         
-        // Ensure the email matches the provided contact email
+       
         if (googleUser.email !== contactEmail) {
             return res.status(400).json({ error: 'Google account email does not match provided email' });
         }
 
-        // Check availability again before booking
+        
         const availabilityCheck = await pool.request()
             .input('venueId', sql.Int, venueId)
             .input('date', sql.Date, eventDate)
@@ -262,7 +262,7 @@ app.post('/api/bookings', async (req, res) => {
     }
 });
 
-// ADMIN ENDPOINTS (require authentication)
+
 app.get('/api/bookings', authenticateToken, async (req, res) => {
     const { startDate, endDate, venueId, status } = req.query;
     
@@ -364,7 +364,7 @@ app.put('/api/bookings/:id', authenticateToken, async (req, res) => {
     const bookingData = req.body;
 
     try {
-        // Check availability (excluding current booking)
+        
         const availabilityCheck = await pool.request()
             .input('venueId', sql.Int, bookingData.venueId)
             .input('date', sql.Date, bookingData.eventDate)
@@ -387,7 +387,7 @@ app.put('/api/bookings/:id', authenticateToken, async (req, res) => {
             });
         }
 
-        // Update booking
+      
         await pool.request()
             .input('bookingId', sql.Int, id)
             .input('clientName', sql.NVarChar, bookingData.clientName)

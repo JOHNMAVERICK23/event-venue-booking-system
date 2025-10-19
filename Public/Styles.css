@@ -91,7 +91,7 @@ body {
     height: 100px;
   }
 
-/* Hero Section */
+
 .hero-section {
     width: 100%;
     height: 100vh;
@@ -143,7 +143,7 @@ body {
     text-align: center;
 }
 
-/* Venue Cards */
+
 .venue-card {
     border: none;
     border-radius: 15px;
@@ -213,7 +213,7 @@ body {
     margin-bottom: 1rem;
 }
 
-/* Form Styles */
+
 .form-group {
     margin-bottom: 1.5rem;
 }
@@ -261,7 +261,7 @@ body {
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
 }
 
-/* Modal Styles */
+
 .modal {
     z-index: 2000 !important;
   }
@@ -299,19 +299,18 @@ body {
     filter: invert(1);
 }
 .modal-body {
-    background-color: #ffffff !important;  /* solid na puti */
-    color: #2c3e50;                        /* dark text para clear */
-    padding: 1.5rem;                       /* dagdag spacing */
-    border-radius: 0 0 20px 20px;          /* align sa modal-content */
+    background-color: #ffffff !important;  
+    color: #2c3e50;                        
+    padding: 1.5rem;                       
+    border-radius: 0 0 20px 20px;        
 }
 
 .modal-footer {
-    background-color: #f8f9fa !important;  /* light gray para contrast */
+    background-color: #f8f9fa !important;  
     border-radius: 0 0 20px 20px;
 }
 
 
-/* Alert Styles */
 .alert {
     border-radius: 15px;
     border: none;
@@ -337,7 +336,6 @@ body {
     border-left: 4px solid var(--secondary-color);
 }
 
-/* Loading Animation */
 .loading {
     display: inline-block;
     width: 20px;
@@ -352,7 +350,6 @@ body {
     to { transform: rotate(360deg); }
 }
 
-/* Admin Dashboard Button */
 .admin-dashboard-btn {
     position: fixed;
     bottom: 2rem;
@@ -374,7 +371,7 @@ body {
     transform: scale(1.1);
 }
 
-/* Booking Form Styles */
+
 .booking-step {
     display: none;
 }
@@ -447,7 +444,6 @@ body {
     display: block;
 }
 
-/* Admin Dashboard Styles */
 .wrapper {
     display: flex;
     width: 100%;
@@ -589,7 +585,6 @@ a[data-toggle="collapse"] {
     font-size: 0.85rem;
 }
 
-/* Responsive Design */
 @media (max-width: 768px) {
     .hero-title {
         font-size: 2.5rem;
@@ -625,7 +620,6 @@ a[data-toggle="collapse"] {
     }
 }
 
-/* Login Page Specific Styles */
 .login-page {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     min-height: 100vh;
@@ -652,7 +646,6 @@ a[data-toggle="collapse"] {
     padding: 2rem;
 }
 
-/* Calendar Styles */
 #calendar {
     margin-top: 1rem;
 }
@@ -663,12 +656,12 @@ a[data-toggle="collapse"] {
     padding: 2px 5px;
 }
 
-/* Chart Styles */
+
 canvas {
     max-height: 400px;
 }
 
-/* Additional Button Styles */
+
 .btn-info {
     background: var(--secondary-color);
     border-color: var(--secondary-color);
@@ -692,7 +685,7 @@ canvas {
 .header-actions {
     display: flex;
     align-items: center;
-    gap: 1rem; /* space sa pagitan ng Book button at Google button */
+    gap: 1rem;
 }
 
 .header-actions .btn-hero {
