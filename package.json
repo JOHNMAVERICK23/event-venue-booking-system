@@ -8,5 +8,25 @@
     "google-auth-library": "^10.3.0",
     "mssql": "^11.0.1",
     "nodemailer": "^7.0.6"
-  }
+  },
+  "name": "eventvenuebookingsystem(not-sure)",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JOHNMAVERICK23/event-venue-booking-system.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/JOHNMAVERICK23/event-venue-booking-system/issues"
+  },
+  "homepage": "https://github.com/JOHNMAVERICK23/event-venue-booking-system#readme"
 }
