@@ -20,7 +20,7 @@ app.use(bodyParser.json());
 
 // PostgreSQL Connection Pool
 const pool = new Pool({
-    user: process.env.DB_USER || 'postgres',
+    user: process.env.DB_USER || 'postgres.khrgjujucdgwfevwgrly',
     password: process.env.DB_PASSWORD,
     host: process.env.DB_HOST,
     port: parseInt(process.env.DB_PORT) || 5432,
@@ -485,8 +485,8 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'Public', 'index.html'));
 });
 
-// Catch-all for SPA routing - serve index.html for any unmatched routes
-app.get('*', (req, res) => {
+// Catch-all route para sa ibang paths
+app.use((req, res) => {
     res.sendFile(path.join(__dirname, 'Public', 'index.html'));
 });
 
