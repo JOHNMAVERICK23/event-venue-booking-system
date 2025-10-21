@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentBookingId = null;
     let calendar;
 
-    const API_BASE = 'http://localhost:3000/api';
+    const API_BASE = 'https://event-venue-booking-system.onrender.com/api';
 
     document.getElementById('sidebarCollapse').addEventListener('click', function() {
         document.getElementById('sidebar').classList.toggle('active');

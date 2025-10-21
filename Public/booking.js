@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = 'https://event-venue-booking-system.onrender.com/api';
 let currentStep = 1;
 let venues = [];
 let googleUser = null;
