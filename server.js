@@ -481,3 +481,7 @@ app.get('/api/reports', authenticateToken, async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+app.get('/', (req, res) => {
+    res.send('Welcome to Event Venue Booking System API is running 🚀');
+  });
+  
