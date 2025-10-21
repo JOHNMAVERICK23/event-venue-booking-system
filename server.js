@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const sql = require('mssql');
+const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
@@ -12,32 +12,30 @@ const PORT = process.env.PORT || 3000;
 const { OAuth2Client } = require('google-auth-library');
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 app.use(bodyParser.json());
 
-const dbConfig = {
+// PostgreSQL Connection Pool
+const pool = new Pool({
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    server: process.env.DB_SERVER,
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT || 5432,
     database: process.env.DB_NAME,
-    options: {
-        encrypt: false,
-        trustServerCertificate: true
-    }
-};
+    ssl: { rejectUnauthorized: false }
+});
+
+pool.on('error', (err) => {
+    console.error('Unexpected error on idle client', err);
+});
+
+pool.connect()
+    .then(() => console.log('Connected to PostgreSQL'))
+    .catch(err => console.error('Database connection failed:', err));
 
 const JWT_SECRET = process.env.JWT_SECRET || 'mysecretkey123';
-let pool;
-
-sql.connect(dbConfig).then(p => {
-    pool = p;
-    console.log('Connected to SQL Server');
-}).catch(err => {
-    console.error('Database connection failed:', err);
-});
 
 async function verifyGoogleToken(token) {
     try {
@@ -54,24 +52,24 @@ async function verifyGoogleToken(token) {
 }
 
 async function hashPassword() {
-    const password = "admin123"; 
+    const password = "admin123";
     const saltRounds = 10;
-  
+
     try {
-      const hashed = await bcrypt.hash(password, saltRounds);
-      console.log("Hashed password:", hashed);
+        const hashed = await bcrypt.hash(password, saltRounds);
+        console.log("Hashed password:", hashed);
     } catch (err) {
-      console.error("Error hashing password:", err);
+        console.error("Error hashing password:", err);
     }
-  }
-  hashPassword();
+}
+hashPassword();
 
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-    
+
     if (!token) return res.sendStatus(401);
-    
+
     jwt.verify(token, JWT_SECRET, (err, user) => {
         if (err) return res.sendStatus(403);
         req.user = user;
@@ -81,29 +79,27 @@ function authenticateToken(req, res, next) {
 
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
-    
+
     try {
-        const result = await pool.request()
-            .input('username', sql.NVarChar, username)
-            .query('SELECT * FROM users WHERE username = @username');
-        
-        if (result.recordset.length === 0) {
+        const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+
+        if (result.rows.length === 0) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
-        
-        const user = result.recordset[0];
+
+        const user = result.rows[0];
         const validPassword = await bcrypt.compare(password, user.password_hash);
-        
+
         if (!validPassword) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
-        
+
         const token = jwt.sign(
             { userId: user.user_id, username: user.username, role: user.role },
             JWT_SECRET,
             { expiresIn: '1h' }
-        );       
-        
+        );
+
         res.json({
             token,
             user: {
@@ -120,19 +116,15 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-
 app.get('/api/venues', async (req, res) => {
     try {
-        const result = await pool.request()
-            .query('SELECT * FROM venues WHERE status = \'Available\'');
-        
-        res.json(result.recordset);
+        const result = await pool.query('SELECT * FROM venues WHERE status = $1', ['Available']);
+        res.json(result.rows);
     } catch (err) {
         console.error('Error fetching venues:', err);
         res.status(500).json({ error: 'Server error' });
     }
 });
-
 
 app.post('/api/venues/availability', async (req, res) => {
     const { venueId, date, startTime, endTime, excludeBookingId } = req.body;
@@ -142,30 +134,26 @@ app.post('/api/venues/availability', async (req, res) => {
     try {
         let query = `
             SELECT * FROM event_bookings 
-            WHERE venue_id = @venueId 
-            AND event_date = @date
-            AND status = 'Confirmed'
-            AND (
-                (@startTime < end_time AND @endTime > start_time)
-            )`;
+            WHERE venue_id = $1 
+            AND event_date = $2
+            AND status = $3
+            AND ($4 < end_time AND $5 > start_time)`;
 
-        const request = pool.request()
-            .input('venueId', sql.Int, venueId)
-            .input('date', sql.Date, date)
-            .input('startTime', sql.NVarChar, startTime)
-            .input('endTime', sql.NVarChar, endTime)            
+        let params = [venueId, date, 'Confirmed', startTime, endTime];
 
         if (excludeBookingId) {
-            query += ' AND booking_id != @excludeBookingId';
-            request.input('excludeBookingId', sql.Int, excludeBookingId);
+            query += ' AND booking_id != $6';
+            params.push(excludeBookingId);
         }
 
-        const result = await request.query(query);
+        const result = await pool.query(query, params);
 
-        if (result.recordset.length > 0) {
-            res.json({ available: false, 
-                conflicts: result.recordset,
-                message: 'Venue is already booked for the selected time slot' });
+        if (result.rows.length > 0) {
+            res.json({
+                available: false,
+                conflicts: result.rows,
+                message: 'Venue is already booked for the selected time slot'
+            });
         } else {
             res.json({ available: true });
         }
@@ -175,86 +163,65 @@ app.post('/api/venues/availability', async (req, res) => {
     }
 });
 
-
 app.post('/api/bookings', async (req, res) => {
-    const { 
-        clientName, 
-        contactEmail, 
-        contactPhone, 
-        eventType, 
-        venueId, 
-        eventDate, 
-        startTime, 
-        endTime, 
-        expectedGuests, 
-        specialRequests ,
+    const {
+        clientName,
+        contactEmail,
+        contactPhone,
+        eventType,
+        venueId,
+        eventDate,
+        startTime,
+        endTime,
+        expectedGuests,
+        specialRequests,
         googleToken
     } = req.body;
-    
+
     try {
         if (!googleToken) {
             return res.status(400).json({ error: 'Google authentication required' });
         }
-        
+
         const googleUser = await verifyGoogleToken(googleToken);
         if (!googleUser) {
             return res.status(400).json({ error: 'Invalid Google authentication' });
         }
-        
-       
+
         if (googleUser.email !== contactEmail) {
             return res.status(400).json({ error: 'Google account email does not match provided email' });
         }
 
-        
-        const availabilityCheck = await pool.request()
-            .input('venueId', sql.Int, venueId)
-            .input('date', sql.Date, eventDate)
-            .input('startTime', sql.NVarChar, startTime)
-            .input('endTime', sql.NVarChar, endTime)
+        const availabilityCheck = await pool.query(`
+            SELECT * FROM event_bookings 
+            WHERE venue_id = $1 
+            AND event_date = $2
+            AND status = $3
+            AND ($4 < end_time AND $5 > start_time)
+        `, [venueId, eventDate, 'Confirmed', startTime, endTime]);
 
-            .query(`
-                SELECT * FROM event_bookings 
-                WHERE venue_id = @venueId 
-                AND event_date = @date
-                AND status = 'Confirmed'
-                AND (@startTime < end_time AND @endTime > start_time)
-            `);
-        
-        if (availabilityCheck.recordset.length > 0) {
-            return res.status(400).json({ 
+        if (availabilityCheck.rows.length > 0) {
+            return res.status(400).json({
                 error: 'Venue is not available for the selected time slot',
-                conflicts: availabilityCheck.recordset 
+                conflicts: availabilityCheck.rows
             });
         }
-        
-        const result = await pool.request()
-            .input('clientName', sql.NVarChar, clientName)
-            .input('contactEmail', sql.NVarChar, contactEmail)
-            .input('contactPhone', sql.NVarChar, contactPhone)
-            .input('eventType', sql.NVarChar, eventType)
-            .input('venueId', sql.Int, venueId)
-            .input('eventDate', sql.Date, new Date(eventDate))
-            .input('startTime', sql.NVarChar, startTime)
-            .input('endTime', sql.NVarChar, endTime)
-            .input('expectedGuests', sql.Int, expectedGuests)
-            .input('specialRequests', sql.NVarChar, specialRequests)
-            .input('googleId', sql.NVarChar, googleUser.sub) 
-            .query(`
-                INSERT INTO event_bookings (
-                    client_name, contact_email, contact_phone, event_type, 
-                    venue_id, event_date, start_time, end_time, 
-                    expected_guests, special_requests, status
-                ) 
-                OUTPUT INSERTED.booking_id
-                VALUES (
-                    @clientName, @contactEmail, @contactPhone, @eventType, 
-                    @venueId, @eventDate, @startTime, @endTime, 
-                    @expectedGuests, @specialRequests, 'Pending'
-                )
-            `);        
-        
-        const bookingId = result.recordset[0].booking_id;
+
+        const result = await pool.query(`
+            INSERT INTO event_bookings (
+                client_name, contact_email, contact_phone, event_type, 
+                venue_id, event_date, start_time, end_time, 
+                expected_guests, special_requests, status
+            ) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            RETURNING booking_id
+        `, [
+            clientName, contactEmail, contactPhone, eventType,
+            venueId, eventDate, startTime, endTime,
+            expectedGuests, specialRequests || null, 'Pending'
+        ]);
+
+        const bookingId = result.rows[0].booking_id;
         res.status(201).json({ booking_id: bookingId });
     } catch (err) {
         console.error('Error creating booking:', err);
@@ -262,10 +229,9 @@ app.post('/api/bookings', async (req, res) => {
     }
 });
 
-
 app.get('/api/bookings', authenticateToken, async (req, res) => {
     const { startDate, endDate, venueId, status } = req.query;
-    
+
     try {
         let query = `
             SELECT 
@@ -275,35 +241,39 @@ app.get('/api/bookings', authenticateToken, async (req, res) => {
                 v.venue_id, v.venue_name, v.capacity, v.hourly_rate
             FROM event_bookings b
             JOIN venues v ON b.venue_id = v.venue_id
-            WHERE 1=1
-        `;
-        
-        const request = pool.request();
-        
+            WHERE 1=1`;
+
+        let params = [];
+        let paramIndex = 1;
+
         if (startDate) {
-            query += ' AND b.event_date >= @startDate';
-            request.input('startDate', sql.Date, startDate);
+            query += ` AND b.event_date >= $${paramIndex}`;
+            params.push(startDate);
+            paramIndex++;
         }
-        
+
         if (endDate) {
-            query += ' AND b.event_date <= @endDate';
-            request.input('endDate', sql.Date, endDate);
+            query += ` AND b.event_date <= $${paramIndex}`;
+            params.push(endDate);
+            paramIndex++;
         }
-        
+
         if (venueId) {
-            query += ' AND b.venue_id = @venueId';
-            request.input('venueId', sql.Int, venueId);
+            query += ` AND b.venue_id = $${paramIndex}`;
+            params.push(venueId);
+            paramIndex++;
         }
-        
+
         if (status) {
-            query += ' AND b.status = @status';
-            request.input('status', sql.NVarChar, status);
+            query += ` AND b.status = $${paramIndex}`;
+            params.push(status);
+            paramIndex++;
         }
-        
+
         query += ' ORDER BY b.event_date DESC, b.start_time';
-        
-        const result = await request.query(query);
-        res.json(result.recordset);
+
+        const result = await pool.query(query, params);
+        res.json(result.rows);
     } catch (err) {
         console.error('Error fetching bookings:', err);
         res.status(500).json({ error: 'Server error' });
@@ -312,22 +282,20 @@ app.get('/api/bookings', authenticateToken, async (req, res) => {
 
 app.get('/api/bookings/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
-    
+
     try {
-        const result = await pool.request()
-            .input('bookingId', sql.Int, id)
-            .query(`
-                SELECT b.*, v.venue_name, v.capacity, v.hourly_rate
-                FROM event_bookings b
-                JOIN venues v ON b.venue_id = v.venue_id
-                WHERE b.booking_id = @bookingId
-            `);
-        
-        if (result.recordset.length === 0) {
+        const result = await pool.query(`
+            SELECT b.*, v.venue_name, v.capacity, v.hourly_rate
+            FROM event_bookings b
+            JOIN venues v ON b.venue_id = v.venue_id
+            WHERE b.booking_id = $1
+        `, [id]);
+
+        if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Booking not found' });
         }
-        
-        res.json(result.recordset[0]);
+
+        res.json(result.rows[0]);
     } catch (err) {
         console.error('Error fetching booking details:', err);
         res.status(500).json({ error: 'Server error' });
@@ -337,21 +305,18 @@ app.get('/api/bookings/:id', authenticateToken, async (req, res) => {
 app.put('/api/bookings/:id/status', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
-    
+
     if (!['Pending', 'Confirmed', 'Cancelled'].includes(status)) {
         return res.status(400).json({ error: 'Invalid status' });
     }
-    
+
     try {
-        await pool.request()
-            .input('bookingId', sql.Int, id)
-            .input('status', sql.NVarChar, status)
-            .query(`
-                UPDATE event_bookings 
-                SET status = @status, last_updated = GETDATE()
-                WHERE booking_id = @bookingId
-            `);
-        
+        await pool.query(`
+            UPDATE event_bookings 
+            SET status = $1, last_updated = CURRENT_TIMESTAMP
+            WHERE booking_id = $2
+        `, [status, id]);
+
         res.json({ success: true });
     } catch (err) {
         console.error('Error updating booking status:', err);
@@ -364,58 +329,57 @@ app.put('/api/bookings/:id', authenticateToken, async (req, res) => {
     const bookingData = req.body;
 
     try {
-        
-        const availabilityCheck = await pool.request()
-            .input('venueId', sql.Int, bookingData.venueId)
-            .input('date', sql.Date, bookingData.eventDate)
-            .input('startTime', sql.NVarChar,bookingData.startTime)
-            .input('endTime', sql.NVarChar, bookingData.endTime)
-            .input('excludeBookingId', sql.Int, id)
-            .query(`
-                SELECT * FROM event_bookings 
-                WHERE venue_id = @venueId 
-                AND event_date = @date
-                AND status = 'Confirmed'
-                AND (@startTime < end_time AND @endTime > start_time)
-                AND booking_id != @excludeBookingId
-            `);
+        const availabilityCheck = await pool.query(`
+            SELECT * FROM event_bookings 
+            WHERE venue_id = $1 
+            AND event_date = $2
+            AND status = $3
+            AND ($4 < end_time AND $5 > start_time)
+            AND booking_id != $6
+        `, [
+            bookingData.venueId,
+            bookingData.eventDate,
+            'Confirmed',
+            bookingData.startTime,
+            bookingData.endTime,
+            id
+        ]);
 
-        if (availabilityCheck.recordset.length > 0) {
+        if (availabilityCheck.rows.length > 0) {
             return res.status(400).json({
                 error: 'Venue is not available for the selected time slot',
-                conflicts: availabilityCheck.recordset
+                conflicts: availabilityCheck.rows
             });
         }
 
-      
-        await pool.request()
-            .input('bookingId', sql.Int, id)
-            .input('clientName', sql.NVarChar, bookingData.clientName)
-            .input('contactEmail', sql.NVarChar, bookingData.contactEmail)
-            .input('contactPhone', sql.NVarChar, bookingData.contactPhone)
-            .input('eventType', sql.NVarChar, bookingData.eventType)
-            .input('venueId', sql.Int, bookingData.venueId)
-            .input('eventDate', sql.Date, bookingData.eventDate)
-            .input('startTime', sql.NVarChar, bookingData.startTime)
-            .input('endTime', sql.NVarChar, bookingData.endTime)
-            .input('expectedGuests', sql.Int, bookingData.expectedGuests)
-            .input('specialRequests', sql.NVarChar, bookingData.specialRequests || null)
-            .query(`
-                UPDATE event_bookings 
-                SET 
-                    client_name = @clientName,
-                    contact_email = @contactEmail,
-                    contact_phone = @contactPhone,
-                    event_type = @eventType,
-                    venue_id = @venueId,
-                    event_date = @eventDate,
-                    start_time = @startTime,
-                    end_time = @endTime,
-                    expected_guests = @expectedGuests,
-                    special_requests = @specialRequests,
-                    last_updated = GETDATE()
-                WHERE booking_id = @bookingId
-            `);
+        await pool.query(`
+            UPDATE event_bookings 
+            SET 
+                client_name = $1,
+                contact_email = $2,
+                contact_phone = $3,
+                event_type = $4,
+                venue_id = $5,
+                event_date = $6,
+                start_time = $7,
+                end_time = $8,
+                expected_guests = $9,
+                special_requests = $10,
+                last_updated = CURRENT_TIMESTAMP
+            WHERE booking_id = $11
+        `, [
+            bookingData.clientName,
+            bookingData.contactEmail,
+            bookingData.contactPhone,
+            bookingData.eventType,
+            bookingData.venueId,
+            bookingData.eventDate,
+            bookingData.startTime,
+            bookingData.endTime,
+            bookingData.expectedGuests,
+            bookingData.specialRequests || null,
+            id
+        ]);
 
         res.json({ success: true });
     } catch (err) {
@@ -426,23 +390,20 @@ app.put('/api/bookings/:id', authenticateToken, async (req, res) => {
 
 app.get('/api/calendar', authenticateToken, async (req, res) => {
     const { start, end } = req.query;
-    
-    try {
-        const result = await pool.request()
-            .input('startDate', sql.Date, start)
-            .input('endDate', sql.Date, end)
-            .query(`
-                SELECT 
-                    b.booking_id, b.client_name, b.event_type, b.event_date, 
-                    b.start_time, b.end_time, b.status,
-                    v.venue_id, v.venue_name
-                FROM event_bookings b
-                JOIN venues v ON b.venue_id = v.venue_id
-                WHERE b.event_date BETWEEN @startDate AND @endDate
-                ORDER BY b.event_date, b.start_time
-            `);
 
-        const events = result.recordset.map(booking => ({
+    try {
+        const result = await pool.query(`
+            SELECT 
+                b.booking_id, b.client_name, b.event_type, b.event_date, 
+                b.start_time, b.end_time, b.status,
+                v.venue_id, v.venue_name
+            FROM event_bookings b
+            JOIN venues v ON b.venue_id = v.venue_id
+            WHERE b.event_date BETWEEN $1 AND $2
+            ORDER BY b.event_date, b.start_time
+        `, [start, end]);
+
+        const events = result.rows.map(booking => ({
             id: booking.booking_id,
             title: `${booking.venue_name} - ${booking.client_name} (${booking.event_type})`,
             start: `${booking.event_date.toISOString().split('T')[0]}T${booking.start_time}`,
@@ -456,7 +417,7 @@ app.get('/api/calendar', authenticateToken, async (req, res) => {
                 status: booking.status
             }
         }));
-        
+
         res.json(events);
     } catch (err) {
         console.error('Error fetching calendar events:', err);
@@ -466,56 +427,48 @@ app.get('/api/calendar', authenticateToken, async (req, res) => {
 
 app.get('/api/reports', authenticateToken, async (req, res) => {
     const { startDate, endDate, reportType } = req.query;
-    
+
     try {
         if (reportType === 'venue-utilization') {
-            const result = await pool.request()
-                .input('startDate', sql.Date, startDate)
-                .input('endDate', sql.Date, endDate)
-                .query(`
-                    SELECT 
-                        v.venue_id, 
-                        v.venue_name,
-                        COUNT(b.booking_id) AS booking_count,
-                        ISNULL(SUM(DATEDIFF(
-                            MINUTE,
-                            CAST(b.start_time AS TIME),
-                            CAST(b.end_time AS TIME)
-                        )), 0) AS total_minutes,
-                        ISNULL(SUM(
-                            DATEDIFF(
-                                MINUTE,
-                                CAST(b.start_time AS TIME),
-                                CAST(b.end_time AS TIME)
-                            ) / 60.0 * v.hourly_rate
-                        ), 0) AS estimated_revenue
-                    FROM venues v
-                    LEFT JOIN event_bookings b 
-                        ON v.venue_id = b.venue_id 
-                        AND b.event_date BETWEEN @startDate AND @endDate
-                        AND b.status = 'Confirmed'
-                    GROUP BY v.venue_id, v.venue_name, v.hourly_rate
-                    ORDER BY booking_count DESC
-                `);
-            
-            res.json(result.recordset);
+            const result = await pool.query(`
+                SELECT 
+                    v.venue_id, 
+                    v.venue_name,
+                    COUNT(b.booking_id) AS booking_count,
+                    COALESCE(SUM(
+                        EXTRACT(EPOCH FROM (
+                            CAST(b.end_time AS TIME) - CAST(b.start_time AS TIME)
+                        )) / 60
+                    ), 0) AS total_minutes,
+                    COALESCE(SUM(
+                        (EXTRACT(EPOCH FROM (
+                            CAST(b.end_time AS TIME) - CAST(b.start_time AS TIME)
+                        )) / 3600) * v.hourly_rate
+                    ), 0) AS estimated_revenue
+                FROM venues v
+                LEFT JOIN event_bookings b 
+                    ON v.venue_id = b.venue_id 
+                    AND b.event_date BETWEEN $1 AND $2
+                    AND b.status = $3
+                GROUP BY v.venue_id, v.venue_name, v.hourly_rate
+                ORDER BY booking_count DESC
+            `, [startDate, endDate, 'Confirmed']);
+
+            res.json(result.rows);
         } else if (reportType === 'event-types') {
-            const result = await pool.request()
-                .input('startDate', sql.Date, startDate)
-                .input('endDate', sql.Date, endDate)
-                .query(`
-                    SELECT 
-                        event_type,
-                        COUNT(booking_id) AS count,
-                        AVG(CAST(expected_guests AS FLOAT)) AS avg_guests
-                    FROM event_bookings
-                    WHERE event_date BETWEEN @startDate AND @endDate
-                    AND status = 'Confirmed'
-                    GROUP BY event_type
-                    ORDER BY count DESC
-                `);
-            
-            res.json(result.recordset);
+            const result = await pool.query(`
+                SELECT 
+                    event_type,
+                    COUNT(booking_id) AS count,
+                    AVG(CAST(expected_guests AS FLOAT)) AS avg_guests
+                FROM event_bookings
+                WHERE event_date BETWEEN $1 AND $2
+                AND status = $3
+                GROUP BY event_type
+                ORDER BY count DESC
+            `, [startDate, endDate, 'Confirmed']);
+
+            res.json(result.rows);
         } else {
             res.status(400).json({ error: 'Invalid report type' });
         }
