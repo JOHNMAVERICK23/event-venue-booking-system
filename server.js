@@ -13,7 +13,7 @@ const { OAuth2Client } = require('google-auth-library');
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Middleware
-app.use(express.static(path.join(__dirname, 'Public')));
+app.use('/Public', express.static(path.join(__dirname, 'Public')));
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 app.use(bodyParser.json());
