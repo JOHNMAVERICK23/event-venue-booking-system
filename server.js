@@ -24,7 +24,7 @@ const pool = new Pool({
     host: process.env.DB_HOST,
     port: parseInt(process.env.DB_PORT) || 5432,
     database: process.env.DB_NAME || 'postgres',
-    ssl: { rejectUnauthorized: false }
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
 pool.on('error', (err) => {
@@ -481,7 +481,3 @@ app.get('/api/reports', authenticateToken, async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
-app.get('/', (req, res) => {
-    res.send('Welcome to Event Venue Booking System API is running 🚀');
-  });
-  
