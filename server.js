@@ -12,7 +12,8 @@ const PORT = process.env.PORT || 3000;
 const { OAuth2Client } = require('google-auth-library');
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-app.use(express.static(path.join(__dirname, 'public')));
+// Middleware
+app.use(express.static(path.join(__dirname, 'Public')));
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 app.use(bodyParser.json());
@@ -77,6 +78,7 @@ function authenticateToken(req, res, next) {
     });
 }
 
+// API Routes
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
 
@@ -476,6 +478,16 @@ app.get('/api/reports', authenticateToken, async (req, res) => {
         console.error('Error generating report:', err);
         res.status(500).json({ error: 'Server error' });
     }
+});
+
+// Serve index.html for root path
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'Public', 'index.html'));
+});
+
+// Catch-all for SPA routing - serve index.html for any unmatched routes
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'Public', 'index.html'));
 });
 
 app.listen(PORT, () => {
