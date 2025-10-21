@@ -19,12 +19,12 @@ app.use(bodyParser.json());
 
 // PostgreSQL Connection Pool
 const pool = new Pool({
-    user: process.env.DB_USER,
+    user: process.env.DB_USER || 'postgres',
     password: process.env.DB_PASSWORD,
     host: process.env.DB_HOST,
-    port: process.env.DB_PORT || 5432,
-    database: process.env.DB_NAME,
-    ssl: { rejectUnauthorized: false }
+    port: parseInt(process.env.DB_PORT) || 5432,
+    database: process.env.DB_NAME || 'postgres',
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
 pool.on('error', (err) => {
