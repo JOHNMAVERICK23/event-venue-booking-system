@@ -1,8 +1,10 @@
+// FILE: Public/auth.js
 document.addEventListener('DOMContentLoaded', function() {
     
     if (document.getElementById('logoutBtn')) {
         
         checkAuth();
+        
         
         initUserDisplay();
         
@@ -14,27 +16,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function checkAuth() {
     const token = localStorage.getItem('adminToken');
-    const user = localStorage.getItem('adminUser');
+    const user = JSON.parse(localStorage.getItem('adminUser') || '{}');
     
-    console.log('Token:', token);
-    console.log('User:', user);
-    
-    // Only redirect if BOTH token and user are missing
-    if (!token || !user) {
-        console.log('No auth found, redirecting to login');
-        window.location.href = '/Public/admin/admin-login.html';
-        return;
-    }
-    
-    try {
-        const parsedUser = JSON.parse(user);
-        if (!parsedUser.username) {
-            console.log('Invalid user data, redirecting to login');
-            window.location.href = '/Public/admin/admin-login.html';
-            return;
-        }
-    } catch (e) {
-        console.log('Error parsing user, redirecting to login');
+    if (!token || !user.username) {
+        
+        // Fixed: Redirect to the admin login page for protected routes
         window.location.href = '/Public/admin/admin-login.html';
         return;
     }
@@ -58,6 +44,7 @@ function initLogout() {
             localStorage.removeItem('adminToken');
             localStorage.removeItem('adminUser');
             
+            
             window.location.href = '/Public/admin/admin-login.html';
         });
     }
@@ -72,6 +59,7 @@ function initAuthFetch() {
             options.headers = {};
         }
         
+       
         options.headers['Authorization'] = `Bearer ${token}`;
         
         try {
@@ -92,6 +80,30 @@ function initAuthFetch() {
     };
 }
 
+function handlePublicLogin(username, password) {
+    return new Promise((resolve, reject) => {
+       
+        setTimeout(() => {
+            if (username === 'admin' && password === 'admin123') {
+                const token = 'mock-token-' + Date.now();
+                const user = {
+                    username: 'admin',
+                    fullName: 'Administrator',
+                    role: 'Administrator',
+                    email: 'admin@cityofdreams.com'
+                };
+                
+                localStorage.setItem('adminToken', token);
+                localStorage.setItem('adminUser', JSON.stringify(user));
+                
+                resolve({ token, user });
+            } else {
+                reject(new Error('Invalid credentials'));
+            }
+        }, 1000);
+    });
+}
+
 function isTokenValid() {
     const token = localStorage.getItem('adminToken');
     if (!token) return false;
@@ -99,9 +111,11 @@ function isTokenValid() {
     return true;
 }
 
+
 function getCurrentUser() {
     return JSON.parse(localStorage.getItem('adminUser') || '{}');
 }
+
 
 function hasRole(requiredRole) {
     const user = getCurrentUser();
@@ -138,12 +152,13 @@ function startTokenRefresh() {
         
             localStorage.removeItem('adminToken');
             localStorage.removeItem('adminUser');
-            window.location.href = '/Public/admin/admin-login.html';
+            window.location.href = '/Public/index.html';
         }
-    }, 45 * 60 * 1000);
+    }, 45 * 60 * 1000); 
 }
 
 // Initialize token refresh for authenticated sessions
 if (localStorage.getItem('adminToken')) {
+    // Uncomment for production with real backend
     startTokenRefresh();
 }
