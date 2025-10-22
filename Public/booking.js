@@ -1,8 +1,6 @@
 const API_BASE = 'https://event-venue-booking-system.onrender.com/api';
 let currentStep = 1;
 let venues = [];
-let googleUser = null;
-let googleToken = null;
 
 document.addEventListener("DOMContentLoaded", () => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -22,102 +20,38 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     initEventListeners();
     loadVenuesFromAPI();
-    checkPersistedAuth();
 });
 
 function initEventListeners() {
-  
     document.getElementById('checkAvailabilityBtn').addEventListener('click', checkAvailability);
-
-   
     document.getElementById('bookingForm').addEventListener('submit', submitBooking);
-
-   
     document.getElementById('expectedGuests').addEventListener('input', validateGuestCapacity);
     document.getElementById('venueSelect').addEventListener('change', updateVenueSelection);
-    document.getElementById('google-signout').addEventListener('click', handleGoogleSignOut);
 }
 
-function checkPersistedAuth() {
-    const savedAuth = localStorage.getItem('googleAuth');
-    const savedUser = localStorage.getItem('googleUser');
-    
-    if (savedAuth && savedUser) {
-        try {
-            googleToken = savedAuth;
-            googleUser = JSON.parse(savedUser);
-            
-            
-            updateAuthUI(googleUser);
-            
-          
-            const emailField = document.getElementById('contactEmail');
-            if (!emailField.value && googleUser.email) {
-                emailField.value = googleUser.email;
-            }
-            
-            console.log('User authentication restored from storage');
-        } catch (error) {
-            console.error('Error restoring authentication:', error);
-            clearAuthStorage();
-        }
-    }
-}
-
-function clearAuthStorage() {
-    localStorage.removeItem('googleAuth');
-    localStorage.removeItem('googleUser');
-}
-
-function saveAuthToStorage(token, user) {
-    localStorage.setItem('googleAuth', token);
-    localStorage.setItem('googleUser', JSON.stringify(user));
-}
-
-function updateAuthUI(user) {
-    const authStatus = document.getElementById('google-auth-status');
-    const signOutBtn = document.getElementById('google-signout');
-    
-    if (user) {
-        authStatus.textContent = `Authenticated as: ${user.email}`;
-        authStatus.className = 'auth-status authenticated text-success';
-        signOutBtn.style.display = 'block';
-        
-        const googleSignInBtn = document.querySelector('.g_id_signin');
-        if (googleSignInBtn) {
-            googleSignInBtn.style.display = 'none';
-        }
-    } else {
-        authStatus.textContent = 'No Account login';
-        authStatus.className = 'auth-status text-muted';
-        signOutBtn.style.display = 'none';
-        
-        const googleSignInBtn = document.querySelector('.g_id_signin');
-        if (googleSignInBtn) {
-            googleSignInBtn.style.display = 'block';
-        }
-    }
-}
-
-
-async function loadVenuesFromAPI() {
+function loadVenuesFromAPI() {
     try {
-        const response = await fetch(`${API_BASE}/venues`, {
+        fetch(`${API_BASE}/venues`, {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' }
-        });
-        
-        if (response.ok) {
-            const apiVenues = await response.json();
+        }).then(response => {
+            if (response.ok) {
+                return response.json();
+            } else {
+                throw new Error('Failed to load venues');
+            }
+        }).then(apiVenues => {
             venues = apiVenues;
-        } else {
+            populateVenueSelect();
+        }).catch(error => {
             console.warn('Failed to load venues from API, using fallback data');
             venues = [
                 { venue_id: 1, venue_name: 'Grand Ballroom', capacity: 500, hourly_rate: 15000 },
                 { venue_id: 2, venue_name: 'Conference Hall A', capacity: 100, hourly_rate: 5000 },
                 { venue_id: 3, venue_name: 'Garden Pavilion', capacity: 200, hourly_rate: 8000 }
             ];
-        }
+            populateVenueSelect();
+        });
     } catch (error) {
         console.error('Error loading venues:', error);
         venues = [
@@ -125,8 +59,11 @@ async function loadVenuesFromAPI() {
             { venue_id: 2, venue_name: 'Conference Hall A', capacity: 100, hourly_rate: 5000 },
             { venue_id: 3, venue_name: 'Garden Pavilion', capacity: 200, hourly_rate: 8000 }
         ];
+        populateVenueSelect();
     }
+}
 
+function populateVenueSelect() {
     const venueSelect = document.getElementById('venueSelect');
     venueSelect.innerHTML = '<option value="">Select a venue</option>';
 
@@ -147,35 +84,6 @@ async function loadVenuesFromAPI() {
 
     updateVenueCards(venues);
 }
-
-function handleGoogleSignOut() {
-   
-    clearAuthStorage();
- 
-    googleUser = null;
-    googleToken = null;
- 
-    updateAuthUI(null);
-    document.getElementById('googleToken').value = '';
-    
-    reloadGoogleSignIn();
-    
-    console.log('User signed out successfully');
-}
-
-function reloadGoogleSignIn() {
-    const oldScript = document.querySelector('script[src*="accounts.google.com/gsi/client"]');
-    if (oldScript) {
-        oldScript.remove();
-    }
-    
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    document.head.appendChild(script);
-}
-
 
 function updateVenueCards(venuesData) {
     console.log("Venues loaded:", venuesData);
@@ -205,45 +113,6 @@ function prevStep(step) {
     document.getElementById(`step${currentStep}`).classList.add('active');
 }
 
-function loadGoogleSignIn() {
-    gapi.load('auth2', function() {
-        gapi.auth2.init({
-            client_id: 'YOUR_GOOGLE_CLIENT_ID', 
-            cookiepolicy: 'single_host_origin',
-        }).then(function(auth2) {
-            const signInButton = document.getElementById('google-signin-button');
-            auth2.attachClickHandler(signInButton, {},
-                function(user) {
-    
-                    googleUser = user;
-                    googleToken = user.getAuthResponse().id_token;
-                    document.getElementById('googleToken').value = googleToken;
-                    
-                
-                    const emailField = document.getElementById('contactEmail');
-                    if (!emailField.value) {
-                        emailField.value = user.getBasicProfile().getEmail();
-                    }
-                    
-                    
-                    document.getElementById('google-auth-status').textContent = 
-                        `Authenticated as: ${user.getBasicProfile().getEmail()}`;
-                    document.getElementById('google-auth-status').className = 
-                        'mt-2 small text-success';
-                },
-                function(error) {
-                    console.error('Google Sign-In error:', error);
-                    document.getElementById('google-auth-status').textContent = 
-                        'Error during authentication. Please try again.';
-                    document.getElementById('google-auth-status').className = 
-                        'mt-2 small text-danger';
-                }
-            );
-        });
-    });
-}
-
-
 function validateCurrentStep() {
     if (currentStep === 1) {
         const required = ['clientName', 'eventType', 'contactEmail', 'contactPhone', 'expectedGuests'];
@@ -256,27 +125,18 @@ function validateCurrentStep() {
             }
         }
 
-        
         const email = document.getElementById('contactEmail').value;
         if (!isValidEmail(email)) {
             showAlert('danger', 'Please enter a valid email address');
             return false;
         }
 
-        
         const phone = document.getElementById('contactPhone').value;
         if (!isValidPhone(phone)) {
             showAlert('danger', 'Please enter a valid phone number');
             return false;
         }
 
-        
-        if (!googleToken) {
-            showAlert('danger', 'Please authenticate with Google to continue');
-            return false;
-        }
-
-        
         return validateGuestCapacity();
     } else if (currentStep === 2) {
         const required = ['eventDate', 'startTime', 'endTime'];
@@ -287,7 +147,6 @@ function validateCurrentStep() {
             }
         }
 
-        
         const eventDate = new Date(document.getElementById('eventDate').value);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -297,7 +156,6 @@ function validateCurrentStep() {
             return false;
         }
 
-        
         const startTime = document.getElementById('startTime').value;
         const endTime = document.getElementById('endTime').value;
         if (startTime >= endTime) {
@@ -305,13 +163,11 @@ function validateCurrentStep() {
             return false;
         }
 
-        
         if (!document.getElementById('venueSelect').value) {
             showAlert('danger', 'Please select a venue');
             return false;
         }
 
-        
         const availabilityResult = document.getElementById('availabilityResult');
         if (!availabilityResult.classList.contains('available')) {
             showAlert('danger', 'Please check venue availability first');
@@ -322,7 +178,6 @@ function validateCurrentStep() {
     }
     return true;
 }
-
 
 function isValidPhone(phone) {
     return /^[+]?[\d\s\-()]{10,}$/.test(phone);
@@ -346,11 +201,9 @@ function isValidEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-
 function updateVenueSelection() {
     validateGuestCapacity();
 }
-
 
 async function checkAvailability() {
     const venueId = document.getElementById('venueSelect').value;
@@ -368,7 +221,6 @@ async function checkAvailability() {
         return;
     }
 
-   
     const selectedDate = new Date(eventDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -378,14 +230,12 @@ async function checkAvailability() {
         return;
     }
 
- 
     const btn = document.getElementById('checkAvailabilityBtn');
     const originalText = btn.innerHTML;
     btn.innerHTML = '<span class="loading"></span> Checking...';
     btn.disabled = true;
 
     try {
-      
         const response = await fetch(`${API_BASE}/venues/availability`, {
             method: 'POST',
             headers: {
@@ -451,7 +301,6 @@ async function checkAvailability() {
     } catch (error) {
         showAlert('danger', 'Error checking availability. Please try again.');
         console.error('Availability check error:', error);
-        
 
         const resultDiv = document.getElementById('availabilityResult');
         resultDiv.style.display = 'block';
@@ -471,7 +320,6 @@ async function checkAvailability() {
         btn.disabled = false;
     }
 }
-
 
 function populateBookingSummary() {
     const formData = getFormData();
@@ -522,14 +370,8 @@ function populateBookingSummary() {
     `;
 }
 
-
 async function submitBooking(e) {
     e.preventDefault();
-
-    if (!googleToken) {
-        showAlert('danger', 'Please re-authenticate with Google before submitting');
-        return;
-    }
     
     const submitBtn = document.getElementById('submitBookingBtn');
     const originalText = submitBtn.innerHTML;
@@ -538,7 +380,6 @@ async function submitBooking(e) {
 
     try {
         const formData = getFormData();
-        
 
         const response = await fetch(`${API_BASE}/bookings`, {
             method: 'POST',
@@ -556,8 +397,7 @@ async function submitBooking(e) {
                 startTime: formData.startTime,
                 endTime: formData.endTime,
                 expectedGuests: parseInt(formData.expectedGuests),
-                specialRequests: formData.specialRequests,
-                googleToken: googleToken
+                specialRequests: formData.specialRequests
             })
         });
         
@@ -569,7 +409,6 @@ async function submitBooking(e) {
         const bookingResult = await response.json();
         
         showSuccessModal(formData, bookingResult.booking_id);
-        
         resetBookingForm();
         
     } catch (error) {
@@ -624,11 +463,9 @@ function getFormData() {
         eventDate: document.getElementById('eventDate').value,      
         startTime: normalizeTime(document.getElementById('startTime').value),
         endTime: normalizeTime(document.getElementById('endTime').value),       
-        specialRequests: document.getElementById('specialRequests').value,
-        googleToken: document.getElementById('googleToken').value
+        specialRequests: document.getElementById('specialRequests').value
     };
 }
-
 
 function showSuccessModal(formData, bookingId) {
     const venue = venues.find(v => v.venue_id == formData.venueId);
@@ -645,18 +482,14 @@ function showSuccessModal(formData, bookingId) {
             </div>
         </div>
     `;
-    
 
     const modal = new bootstrap.Modal(document.getElementById('successModal'));
     modal.show();
     
- 
     document.getElementById('successModal').addEventListener('hidden.bs.modal', function () {
         resetBookingForm();
     });
 }
-
-
 
 function resetBookingForm() {
     document.getElementById('bookingForm').reset();
@@ -722,7 +555,6 @@ function showAlert(type, message) {
     
     document.body.appendChild(alert);
     
-    
     setTimeout(() => {
         if (alert.parentElement) {
             alert.remove();
@@ -743,35 +575,4 @@ function formatTime(time) {
         minute: '2-digit',
         hour12: true
     });
-}
-
-function handleGoogleSignIn(response) {
-    googleToken = response.credential;
-    googleUser = parseJwt(googleToken);
-
-    saveAuthToStorage(googleToken, googleUser);
-    
-    
-    if (googleUser && googleUser.email && !document.getElementById('contactEmail').value) {
-        document.getElementById('contactEmail').value = googleUser.email;
-    }
-    
-    const authStatus = document.getElementById('google-auth-status');
-    if (googleUser) {
-        authStatus.textContent = `Authenticated as: ${googleUser.email}`;
-        authStatus.className = 'auth-status authenticated';
-        document.getElementById('googleToken').value = googleToken;
-    } else {
-        authStatus.textContent = 'Authentication failed. Please try again.';
-        authStatus.className = 'auth-status error';
-    }
-
-}
-
-function parseJwt(token) {
-    try {
-        return JSON.parse(atob(token.split('.')[1]));
-    } catch (e) {
-        return null;
-    }
 }
