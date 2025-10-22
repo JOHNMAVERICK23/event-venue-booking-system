@@ -13,10 +13,6 @@ document.addEventListener("DOMContentLoaded", () => {
             venueSelect.innerHTML = `<option value="${venueId}" selected>${venueName}</option>`;
             venueSelect.disabled = true; 
         }
-        const venueInput = document.getElementById("selectedVenue");
-        if (venueInput) {
-            venueInput.value = venueName;
-        }
     }
     initEventListeners();
     loadVenuesFromAPI();

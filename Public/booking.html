@@ -23,14 +23,13 @@
                     <div class="nav-links justify-content-end">
                         <a class="nav-link" href="/Public/index.html">Home</a>
                         <a class="nav-link" href="/Public/venues.html">Venues</a>
-                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </header>
 
-     <section id="booking-section" class="content-section">
+    <section id="booking-section" class="content-section">
         <h2 class="section-title">Book Your Event</h2>
         
         <div class="step-indicator">
@@ -67,7 +66,6 @@
                         <div class="form-group">
                             <label for="contactEmail" class="form-label">Contact Email *</label>
                             <input type="email" class="form-control" id="contactEmail" required>
-
                         </div>
                     </div>
                     <div class="col-md-6">
@@ -158,7 +156,6 @@
                                 <h5 class="card-title mb-0">Booking Summary</h5>
                             </div>
                             <div class="card-body" id="bookingSummary">
-                               
                             </div>
                         </div>
                     </div>
@@ -174,37 +171,34 @@
             </div>
         </form>
     </section>
-</div>
 
-<footer class="footer">
-    <div class="container">
-        <p>&copy; Copy Right 2025 Event-Venue-Booking-System. All rights reserved (Albania, John Maverick B.)</p>
-    </div>
-</footer>
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; Copy Right 2025 Event-Venue-Booking-System. All rights reserved (Albania, John Maverick B.)</p>
+        </div>
+    </footer>
 
-
-<div class="modal fade" id="successModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title">
-                    <i class="bi bi-check-circle"></i> Booking Successful!
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: invert(1);"></button>
-            </div>
-            <div class="modal-body text-center">
-                <h4>Thank you for your booking!</h4>
-                <p>Your booking request has been submitted successfully. We will contact you within 24 hours to confirm your reservation.</p>
-                <div id="bookingConfirmation"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-success" data-bs-dismiss="modal">Close</button>
+    <div class="modal fade" id="successModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-check-circle"></i> Booking Successful!
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: invert(1);"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <h4>Thank you for your booking!</h4>
+                    <p>Your booking request has been submitted successfully. We will contact you within 24 hours to confirm your reservation.</p>
+                    <div id="bookingConfirmation"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-success" data-bs-dismiss="modal">Close</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
-    
-    
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/Public/booking.js"></script>
 </body>
