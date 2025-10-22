@@ -8,6 +8,7 @@ function showAdminLogin() {
     const modal = new bootstrap.Modal(document.getElementById('adminLoginModal'));
     modal.show();
 }
+
 function checkAdminAccess() {
     const token = localStorage.getItem('adminToken');
     if (token) {
@@ -16,6 +17,7 @@ function checkAdminAccess() {
         showAdminLogin();
     }
 }
+
 async function handleAdminLogin(e) {
     e.preventDefault();
     
@@ -30,7 +32,6 @@ async function handleAdminLogin(e) {
     
     try {
         const response = await fetch(`${API_BASE}/login`, {
-
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -46,7 +47,8 @@ async function handleAdminLogin(e) {
             localStorage.setItem('adminToken', data.token);
             localStorage.setItem('adminUser', JSON.stringify(data.user));
             
-            window.location.href = '/dashboard.html';
+            // Fixed path - napunta sa correct dashboard
+            window.location.href = '/Public/admin/dashboard.html';
         } else {
             const errorData = await response.json();
             showAlert('danger', errorData.error || 'Invalid username or password');
@@ -59,6 +61,7 @@ async function handleAdminLogin(e) {
         spinner.style.display = 'none';
     }
 }
+
 function initEventListeners() {
     document.getElementById('adminLoginForm').addEventListener('submit', handleAdminLogin);
 }
@@ -120,9 +123,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const passwordInput = document.getElementById("adminPassword");
     const togglePassword = document.getElementById("togglePassword");
   
-    togglePassword.addEventListener("change", () => {
-      passwordInput.type = togglePassword.checked ? "text" : "password";
-    });
-  });
-  
-  
+    if (togglePassword) {
+        togglePassword.addEventListener("change", () => {
+            passwordInput.type = togglePassword.checked ? "text" : "password";
+        });
+    }
+});
