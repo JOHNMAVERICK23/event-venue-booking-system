@@ -19,7 +19,7 @@ function checkAuth() {
     
     if (!token || !user.username) {
         
-        window.location.href = 'index.html';
+        window.location.href = '/Public/index.html';
         return;
     }
 }
@@ -43,7 +43,7 @@ function initLogout() {
             localStorage.removeItem('adminUser');
             
             
-            window.location.href = 'admin/admin-login.html';
+            window.location.href = '/Public/admin/admin-login.html';
         });
     }
 }
@@ -66,7 +66,7 @@ function initAuthFetch() {
             if (response.status === 401) {
                 localStorage.removeItem('adminToken');
                 localStorage.removeItem('adminUser');
-                window.location.href = 'index.html';
+                window.location.href = '/Public/index.html';
                 return;
             }
             
@@ -150,7 +150,7 @@ function startTokenRefresh() {
         
             localStorage.removeItem('adminToken');
             localStorage.removeItem('adminUser');
-            window.location.href = 'index.html';
+            window.location.href = '/Public/index.html';
         }
     }, 45 * 60 * 1000); 
 }
