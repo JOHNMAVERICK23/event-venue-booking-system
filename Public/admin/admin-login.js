@@ -11,7 +11,7 @@ function showAdminLogin() {
 function checkAdminAccess() {
     const token = localStorage.getItem('adminToken');
     if (token) {
-        window.location.href = '/dashboard.html';
+        window.location.href = '/Public/admin/dashboard.html';
     } else {
         showAdminLogin();
     }
