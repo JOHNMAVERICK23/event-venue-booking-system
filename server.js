@@ -176,24 +176,16 @@ app.post('/api/bookings', async (req, res) => {
         startTime,
         endTime,
         expectedGuests,
-        specialRequests,
-        googleToken
+        specialRequests
     } = req.body;
 
+    // Validate required fields
+    if (!clientName || !contactEmail || !contactPhone || !eventType || !venueId || !eventDate || !startTime || !endTime || !expectedGuests) {
+        return res.status(400).json({ error: 'Missing required fields' });
+    }
+
     try {
-        if (!googleToken) {
-            return res.status(400).json({ error: 'Google authentication required' });
-        }
-
-        const googleUser = await verifyGoogleToken(googleToken);
-        if (!googleUser) {
-            return res.status(400).json({ error: 'Invalid Google authentication' });
-        }
-
-        if (googleUser.email !== contactEmail) {
-            return res.status(400).json({ error: 'Google account email does not match provided email' });
-        }
-
+        // Check venue availability
         const availabilityCheck = await pool.query(`
             SELECT * FROM event_bookings 
             WHERE venue_id = $1 
@@ -209,6 +201,7 @@ app.post('/api/bookings', async (req, res) => {
             });
         }
 
+        // Insert booking
         const result = await pool.query(`
             INSERT INTO event_bookings (
                 client_name, contact_email, contact_phone, event_type, 
