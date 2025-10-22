@@ -1,131 +1,164 @@
-const API_BASE = 'https://event-venue-booking-system.onrender.com/api';
-
+// FILE: Public/auth.js
 document.addEventListener('DOMContentLoaded', function() {
-    initEventListeners();
+    
+    if (document.getElementById('logoutBtn')) {
+        
+        checkAuth();
+        
+        
+        initUserDisplay();
+        
+        initLogout();
+        
+        initAuthFetch();
+    }
 });
 
-function showAdminLogin() {
-    const modal = new bootstrap.Modal(document.getElementById('adminLoginModal'));
-    modal.show();
-}
-
-function checkAdminAccess() {
+function checkAuth() {
     const token = localStorage.getItem('adminToken');
-    if (token) {
-        window.location.href = '/Public/admin/dashboard.html';
-    } else {
-        showAdminLogin();
+    const user = JSON.parse(localStorage.getItem('adminUser') || '{}');
+    
+    if (!token || !user.username) {
+        
+        // Fixed: Redirect to the admin login page for protected routes
+        window.location.href = '/Public/admin/admin-login.html';
+        return;
     }
 }
 
-async function handleAdminLogin(e) {
-    e.preventDefault();
+function initUserDisplay() {
+    const user = JSON.parse(localStorage.getItem('adminUser') || '{}');
+    const currentUserElement = document.getElementById('currentUser');
     
-    const username = document.getElementById('adminUsername').value;
-    const password = document.getElementById('adminPassword').value;
+    if (currentUserElement && user.username) {
+        currentUserElement.textContent = `Welcome, ${user.username} (${user.role || 'Administrator'})`;
+    }
+}
+
+function initLogout() {
+    const logoutBtn = document.getElementById('logoutBtn');
     
-    const loginBtn = document.getElementById('loginBtnText');
-    const spinner = document.getElementById('loginSpinner');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', function() {
+            
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminUser');
+            
+            
+            window.location.href = '/Public/admin/admin-login.html';
+        });
+    }
+}
+
+function initAuthFetch() {
     
-    loginBtn.style.display = 'none';
-    spinner.style.display = 'inline-block';
-    
+    window.authFetch = async (url, options = {}) => {
+        const token = localStorage.getItem('adminToken');
+        
+        if (!options.headers) {
+            options.headers = {};
+        }
+        
+       
+        options.headers['Authorization'] = `Bearer ${token}`;
+        
+        try {
+            const response = await fetch(url, options);
+           
+            if (response.status === 401) {
+                localStorage.removeItem('adminToken');
+                localStorage.removeItem('adminUser');
+                window.location.href = '/Public/admin/admin-login.html';
+                return;
+            }
+            
+            return response;
+        } catch (error) {
+            console.error('Fetch error:', error);
+            throw error;
+        }
+    };
+}
+
+function handlePublicLogin(username, password) {
+    return new Promise((resolve, reject) => {
+       
+        setTimeout(() => {
+            if (username === 'admin' && password === 'admin123') {
+                const token = 'mock-token-' + Date.now();
+                const user = {
+                    username: 'admin',
+                    fullName: 'Administrator',
+                    role: 'Administrator',
+                    email: 'admin@cityofdreams.com'
+                };
+                
+                localStorage.setItem('adminToken', token);
+                localStorage.setItem('adminUser', JSON.stringify(user));
+                
+                resolve({ token, user });
+            } else {
+                reject(new Error('Invalid credentials'));
+            }
+        }, 1000);
+    });
+}
+
+function isTokenValid() {
+    const token = localStorage.getItem('adminToken');
+    if (!token) return false;
+   
+    return true;
+}
+
+
+function getCurrentUser() {
+    return JSON.parse(localStorage.getItem('adminUser') || '{}');
+}
+
+
+function hasRole(requiredRole) {
+    const user = getCurrentUser();
+    return user.role === requiredRole || user.role === 'Administrator';
+}
+
+async function refreshToken() {
     try {
-        const response = await fetch(`${API_BASE}/login`, {
+        const response = await fetch('/api/refresh-token', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                username: username,
-                password: password
-            })
+                'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+            }
         });
         
         if (response.ok) {
             const data = await response.json();
             localStorage.setItem('adminToken', data.token);
-            localStorage.setItem('adminUser', JSON.stringify(data.user));
-            
-            // Fixed path - napunta sa correct dashboard
-            window.location.href = '/Public/admin/dashboard.html';
-        } else {
-            const errorData = await response.json();
-            showAlert('danger', errorData.error || 'Invalid username or password');
+            return true;
         }
+        
+        return false;
     } catch (error) {
-        showAlert('danger', 'Login error. Please try again.');
-        console.error('Login error:', error);
-    } finally {
-        loginBtn.style.display = 'inline';
-        spinner.style.display = 'none';
+        console.error('Token refresh failed:', error);
+        return false;
     }
 }
 
-function initEventListeners() {
-    document.getElementById('adminLoginForm').addEventListener('submit', handleAdminLogin);
-}
-
-function showAlert(type, message) {
-    const existingAlerts = document.querySelectorAll('.custom-alert');
-    existingAlerts.forEach(alert => alert.remove());
-    
-    const alert = document.createElement('div');
-    alert.className = `custom-alert alert-${type}`;
-    alert.innerHTML = `
-        <span>${message}</span>
-        <button type="button" class="alert-close" onclick="this.parentElement.remove()">×</button>
-    `;
-    
-    if (!document.querySelector('#alert-styles')) {
-        const styles = document.createElement('style');
-        styles.id = 'alert-styles';
-        styles.textContent = `
-            .custom-alert {
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                padding: 15px 20px;
-                border-radius: 5px;
-                color: white;
-                z-index: 1000;
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                min-width: 300px;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            }
-            .alert-danger { background-color: #dc3545; }
-            .alert-success { background-color: #28a745; }
-            .alert-warning { background-color: #ffc107; color: #000; }
-            .alert-close {
-                background: none;
-                border: none;
-                color: inherit;
-                font-size: 20px;
-                cursor: pointer;
-                margin-left: 15px;
-            }
-        `;
-        document.head.appendChild(styles);
-    }
-    
-    document.body.appendChild(alert);
-    
-    setTimeout(() => {
-        if (alert.parentElement) {
-            alert.remove();
+function startTokenRefresh() {
+   
+    setInterval(async () => {
+        const refreshed = await refreshToken();
+        if (!refreshed) {
+        
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminUser');
+            window.location.href = '/Public/index.html';
         }
-    }, 5000);
+    }, 45 * 60 * 1000); 
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-    const passwordInput = document.getElementById("adminPassword");
-    const togglePassword = document.getElementById("togglePassword");
-  
-    if (togglePassword) {
-        togglePassword.addEventListener("change", () => {
-            passwordInput.type = togglePassword.checked ? "text" : "password";
-        });
-    }
-});
+// Initialize token refresh for authenticated sessions
+if (localStorage.getItem('adminToken')) {
+    // Uncomment for production with real backend
+    startTokenRefresh();
+}
